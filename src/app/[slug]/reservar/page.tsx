@@ -37,7 +37,7 @@ export default async function ReservarPage({ params, searchParams }: Props) {
   const supabase = await createClient();
   const { data: shop } = await supabase
     .from("shops")
-    .select("*, barbers(*, barber_services(service_id)), services(*)")
+    .select("*, barbers(*, barber_services(service_id)), services(*, service_addons(*))")
     .eq("slug", slug)
     .eq("services.is_active", true)
     .single();

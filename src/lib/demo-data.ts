@@ -72,6 +72,19 @@ export const demoServices: Service[] = [
   { id: "svc-4", shop_id: "demo-shop-1", name: "Consulta infantil", duration_min: 30, price: 1500, currency: "DOP", is_active: true, description: "Atencion preventiva para ninos.", category: "Pediatria", is_visible: true, sort_order: 4, created_at: new Date().toISOString() },
 ];
 
+Object.assign(demoServices[0], {
+  service_addons: [
+    { id: "addon-1", service_id: "svc-1", name: "Pulido extra", price: 450, duration_min: 10, is_active: true, created_at: new Date().toISOString() },
+    { id: "addon-2", service_id: "svc-1", name: "Aplicacion de fluor", price: 350, duration_min: 5, is_active: true, created_at: new Date().toISOString() },
+  ],
+});
+
+Object.assign(demoServices[1], {
+  service_addons: [
+    { id: "addon-3", service_id: "svc-2", name: "Radiografia inicial", price: 900, duration_min: 10, is_active: true, created_at: new Date().toISOString() },
+  ],
+});
+
 export const demoClient: Client = {
   id: "demo-client-1",
   user_id: "demo-user-1",
@@ -98,7 +111,7 @@ export const demoBookings: (Booking & {
     shop_id: "demo-shop-1", service_id: "svc-1",
     date: today, start_time: "09:00:00", end_time: "09:30:00",
     status: "confirmed", deposit_status: "none", deposit_amount: 0,
-    payment_status: "pending", payment_required: false, payment_amount: 350, payment_currency: "DOP", paid_at: null, confirmed_at: null, confirmed_by_user_id: null,
+    payment_status: "pending", payment_required: false, base_amount: 1800, payment_amount: 1800, payment_currency: "DOP", guest_count: 1, notes: "Primera limpieza del semestre", paid_at: null, confirmed_at: null, confirmed_by_user_id: null,
     whatsapp_reminder_sent: false, created_at: new Date().toISOString(),
     clients: { name: "Pedro Rodríguez", phone: "+1 809-555-0300", whatsapp: null },
     barbers: { display_name: "Dra. Laura Perez" },
@@ -109,7 +122,7 @@ export const demoBookings: (Booking & {
     shop_id: "demo-shop-1", service_id: "svc-2",
     date: today, start_time: "10:00:00", end_time: "10:45:00",
     status: "confirmed", deposit_status: "none", deposit_amount: 0,
-    payment_status: "paid", payment_required: false, payment_amount: 550, payment_currency: "DOP", paid_at: new Date().toISOString(), confirmed_at: null, confirmed_by_user_id: null,
+    payment_status: "paid", payment_required: false, base_amount: 2100, payment_amount: 2100, payment_currency: "DOP", guest_count: 2, notes: "Pareja consulta inicial", paid_at: new Date().toISOString(), confirmed_at: null, confirmed_by_user_id: null,
     whatsapp_reminder_sent: false, created_at: new Date().toISOString(),
     clients: { name: "Luis Martínez", phone: "+1 809-555-0400", whatsapp: "+1 809-555-0400" },
     barbers: { display_name: "Dr. Miguel Santos" },
@@ -120,7 +133,7 @@ export const demoBookings: (Booking & {
     shop_id: "demo-shop-1", service_id: "svc-3",
     date: today, start_time: "11:30:00", end_time: "11:50:00",
     status: "completed", deposit_status: "none", deposit_amount: 0,
-    payment_status: "paid", payment_required: false, payment_amount: 300, payment_currency: "DOP", paid_at: new Date().toISOString(), confirmed_at: null, confirmed_by_user_id: null,
+    payment_status: "paid", payment_required: false, base_amount: 4200, payment_amount: 4200, payment_currency: "DOP", guest_count: 1, notes: null, paid_at: new Date().toISOString(), confirmed_at: null, confirmed_by_user_id: null,
     whatsapp_reminder_sent: true, created_at: new Date().toISOString(),
     clients: { name: "Miguel Torres", phone: null, whatsapp: null },
     barbers: { display_name: "Dra. Laura Perez" },
@@ -131,7 +144,7 @@ export const demoBookings: (Booking & {
     shop_id: "demo-shop-1", service_id: "svc-4",
     date: today, start_time: "14:00:00", end_time: "14:25:00",
     status: "confirmed", deposit_status: "none", deposit_amount: 0,
-    payment_status: "failed", payment_required: false, payment_amount: 300, payment_currency: "DOP", paid_at: null, confirmed_at: null, confirmed_by_user_id: null,
+    payment_status: "failed", payment_required: false, base_amount: 1500, payment_amount: 1500, payment_currency: "DOP", guest_count: 1, notes: "Paciente pediatrico", paid_at: null, confirmed_at: null, confirmed_by_user_id: null,
     whatsapp_reminder_sent: false, created_at: new Date().toISOString(),
     clients: { name: "Roberto King Jr.", phone: "+1 809-555-0500", whatsapp: null },
     barbers: { display_name: "Dr. Miguel Santos" },

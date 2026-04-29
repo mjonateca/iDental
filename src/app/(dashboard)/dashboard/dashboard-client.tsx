@@ -27,14 +27,17 @@ import { Toaster } from "@/components/ui/toaster";
 import { formatCurrency, formatTime } from "@/lib/utils";
 import type {
   Barber,
+  BookingAddon,
   BookingStatus,
   NotificationEvent,
   PaymentStatus,
   Service,
+  ServiceAddon,
   Shop,
   ShopPaymentMethod,
   ShopSubscription,
   SubscriptionStatus,
+  WaitlistEntry,
 } from "@/types/database";
 
 export interface BookingWithRelations {
@@ -46,14 +49,19 @@ export interface BookingWithRelations {
   status: BookingStatus;
   payment_status: PaymentStatus;
   payment_required: boolean;
+  base_amount?: number;
   payment_amount: number;
   payment_currency: string;
+  guest_count?: number;
+  notes?: string | null;
+  booking_addons?: BookingAddon[];
   clients: { name: string; phone: string | null; whatsapp: string | null } | null;
   barbers: { display_name: string } | null;
   services: { name: string; duration_min: number; price: number } | null;
 }
 
 type BarberWithServices = Barber & { barber_services?: Array<{ service_id: string }> };
+type ServiceWithAddons = Service & { service_addons?: ServiceAddon[] };
 type ClientSummary = {
   id: string;
   name: string;
@@ -95,9 +103,16 @@ interface Props {
   shop: Shop;
   todayBookings: BookingWithRelations[];
   bookings: BookingWithRelations[];
-  services: Service[];
+  services: ServiceWithAddons[];
   barbers: BarberWithServices[];
   clients: ClientSummary[];
+  waitlistEntries: Array<
+    WaitlistEntry & {
+      clients?: { name: string; phone: string | null; whatsapp: string | null } | null;
+      barbers?: { display_name: string } | null;
+      services?: { name: string } | null;
+    }
+  >;
   notificationEvents: NotificationEvent[];
   subscription: ShopSubscription | null;
   paymentMethods: ShopPaymentMethod[];
@@ -113,6 +128,7 @@ const tabs = [
   { id: "services", label: "Servicios", icon: Scissors },
   { id: "barbers", label: "Dentistas", icon: UserRound },
   { id: "clients", label: "Clientes", icon: Users },
+  { id: "waitlist", label: "Waitlist", icon: Bell },
   { id: "schedule", label: "Horarios", icon: Clock },
   { id: "whatsapp", label: "WhatsApp", icon: Bell },
   { id: "settings", label: "Ajustes", icon: Settings },
@@ -209,6 +225,7 @@ export default function DashboardClient({
   services: initialServices,
   barbers: initialBarbers,
   clients,
+  waitlistEntries: initialWaitlistEntries,
   notificationEvents,
   subscription,
   paymentMethods,
@@ -223,6 +240,7 @@ export default function DashboardClient({
   const [bookings, setBookings] = useState(initialBookings);
   const [services, setServices] = useState(initialServices);
   const [barbers, setBarbers] = useState(initialBarbers);
+  const [waitlistEntries, setWaitlistEntries] = useState(initialWaitlistEntries);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [shopState, setShopState] = useState(shop);
   const [openingHours, setOpeningHours] = useState<OpeningHoursValue>(() => normalizeOpeningHours(shop.opening_hours));
@@ -351,6 +369,64 @@ export default function DashboardClient({
       return;
     }
     setBarbers((prev) => prev.map((item) => (item.id === barber.id ? { ...item, is_active: !item.is_active } : item)));
+  }
+
+  async function createAddon(serviceId: string, event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const response = await fetch(`/api/dashboard/services/${serviceId}/addons`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: form.get("name"),
+        price: Number(form.get("price")),
+        duration_min: Number(form.get("duration_min") || 0),
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      toast({ variant: "destructive", title: "No se creó el add-on", description: payload.error });
+      return;
+    }
+    setServices((prev) =>
+      prev.map((service) =>
+        service.id === serviceId
+          ? { ...service, service_addons: [...(service.service_addons || []), payload] }
+          : service
+      )
+    );
+    event.currentTarget.reset();
+    toast({ title: "Add-on creado" });
+  }
+
+  async function deleteAddon(serviceId: string, addonId: string) {
+    const response = await fetch(`/api/dashboard/service-addons/${addonId}`, { method: "DELETE" });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      toast({ variant: "destructive", title: "No se eliminó el add-on", description: payload.error });
+      return;
+    }
+    setServices((prev) =>
+      prev.map((service) =>
+        service.id === serviceId
+          ? { ...service, service_addons: (service.service_addons || []).filter((addon) => addon.id !== addonId) }
+          : service
+      )
+    );
+  }
+
+  async function updateWaitlistEntry(waitlistId: string, status: WaitlistEntry["status"]) {
+    const response = await fetch(`/api/waitlist/${waitlistId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      toast({ variant: "destructive", title: "No se actualizó la waitlist", description: payload.error });
+      return;
+    }
+    setWaitlistEntries((prev) => prev.map((entry) => (entry.id === waitlistId ? { ...entry, ...payload } : entry)));
   }
 
   async function saveSchedule(event: FormEvent<HTMLFormElement>) {
@@ -583,6 +659,13 @@ export default function DashboardClient({
                     <p className="text-sm text-muted-foreground">
                       {booking.date} · {formatTime(booking.start_time.slice(0, 5))} · {booking.services?.name} · {booking.barbers?.display_name}
                     </p>
+                    {booking.booking_addons?.length ? (
+                      <p className="text-xs text-muted-foreground">Add-ons: {booking.booking_addons.map((addon) => addon.name_snapshot).join(", ")}</p>
+                    ) : null}
+                    {booking.guest_count && booking.guest_count > 1 ? (
+                      <p className="text-xs text-muted-foreground">Pacientes: {booking.guest_count}</p>
+                    ) : null}
+                    {booking.notes ? <p className="text-xs text-muted-foreground">Notas: {booking.notes}</p> : null}
                     <p className="text-xs text-muted-foreground">{STATUS_LABELS[booking.status]}</p>
                     <p className="text-xs text-muted-foreground">
                       {PAYMENT_STATUS_LABELS[booking.payment_status]}
@@ -611,16 +694,45 @@ export default function DashboardClient({
             </CardHeader>
             <CardContent className="space-y-3">
               {services.map((service) => (
-                <div key={service.id} className="flex items-center justify-between gap-3 rounded-xl border p-4">
-                  <div>
-                    <p className="font-medium">{service.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {service.category || "General"} · {service.duration_min} min · {formatCurrency(service.price, service.currency)}
-                    </p>
+                <div key={service.id} className="rounded-xl border p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-medium">{service.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {service.category || "General"} · {service.duration_min} min · {formatCurrency(service.price, service.currency)}
+                      </p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => toggleService(service)}>
+                      {service.is_active ? "Desactivar" : "Activar"}
+                    </Button>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => toggleService(service)}>
-                    {service.is_active ? "Desactivar" : "Activar"}
-                  </Button>
+
+                  <div className="mt-4 space-y-2">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Add-ons</p>
+                    {(service.service_addons || []).length ? (
+                      (service.service_addons || []).map((addon) => (
+                        <div key={addon.id} className="flex items-center justify-between rounded-lg border p-3 text-sm">
+                          <div>
+                            <p className="font-medium">{addon.name}</p>
+                            <p className="text-muted-foreground">
+                              +{addon.duration_min} min · {formatCurrency(addon.price, service.currency)}
+                            </p>
+                          </div>
+                          <Button variant="ghost" size="sm" onClick={() => deleteAddon(service.id, addon.id)}>
+                            Quitar
+                          </Button>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Todavía no hay add-ons para este servicio.</p>
+                    )}
+                    <form onSubmit={(event) => createAddon(service.id, event)} className="grid gap-2 sm:grid-cols-[1fr_110px_110px_auto]">
+                      <Input name="name" placeholder="Add-on" required />
+                      <Input name="duration_min" type="number" min="0" defaultValue="10" placeholder="Min" required />
+                      <Input name="price" type="number" min="0" defaultValue="500" placeholder="Precio" required />
+                      <Button type="submit">Agregar</Button>
+                    </form>
+                  </div>
                 </div>
               ))}
             </CardContent>
@@ -655,6 +767,49 @@ export default function DashboardClient({
       )}
 
       {currentTab === "clients" && <SimpleList title="Clientes" empty="Aún no hay clientes con reservas." items={clientItems} />}
+
+      {currentTab === "waitlist" && (
+        <Card className="shadow-none">
+          <CardHeader>
+            <CardTitle>Waitlist</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {waitlistEntries.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Todavía no hay solicitudes en waitlist.</p>
+            ) : (
+              waitlistEntries.map((entry) => (
+                <div key={entry.id} className="rounded-xl border p-4">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <p className="font-medium">{entry.clients?.name || "Cliente"}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {entry.preferred_date}
+                        {entry.preferred_start_time ? ` · ${formatTime(entry.preferred_start_time.slice(0, 5))}` : ""}
+                        {entry.services?.name ? ` · ${entry.services.name}` : ""}
+                        {entry.barbers?.display_name ? ` · ${entry.barbers.display_name}` : ""}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Estado: {entry.status}</p>
+                      {entry.guest_count > 1 ? <p className="text-xs text-muted-foreground">Pacientes: {entry.guest_count}</p> : null}
+                      {entry.notes ? <p className="text-xs text-muted-foreground">Notas: {entry.notes}</p> : null}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" variant="outline" onClick={() => updateWaitlistEntry(entry.id, "notified")}>
+                        Notificado
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => updateWaitlistEntry(entry.id, "booked")}>
+                        Convertido
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => updateWaitlistEntry(entry.id, "cancelled")}>
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {currentTab === "schedule" && (
         <Card className="shadow-none">
@@ -778,7 +933,7 @@ function CreateServiceForm({ onSubmit }: { onSubmit: (event: FormEvent<HTMLFormE
   );
 }
 
-function CreateBarberForm({ services, onSubmit }: { services: Service[]; onSubmit: (event: FormEvent<HTMLFormElement>) => void }) {
+function CreateBarberForm({ services, onSubmit }: { services: ServiceWithAddons[]; onSubmit: (event: FormEvent<HTMLFormElement>) => void }) {
   return (
     <Card className="shadow-none">
       <CardHeader>

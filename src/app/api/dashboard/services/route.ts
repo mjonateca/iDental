@@ -20,7 +20,7 @@ export async function GET(request: Request) {
 
   const { data, error } = await context.supabase
     .from("services")
-    .select("*")
+    .select("*, service_addons(*)")
     .eq("shop_id", context.shop.id)
     .order("sort_order")
     .order("name");

@@ -8,9 +8,12 @@ const createBookingSchema = z.object({
   barber_id: z.string().uuid(),
   shop_id: z.string().uuid(),
   service_id: z.string().uuid(),
+  addon_ids: z.array(z.string().uuid()).optional().default([]),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   start_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/),
   end_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/),
+  guest_count: z.coerce.number().int().min(1).max(8).optional().default(1),
+  notes: z.string().trim().max(500).optional().nullable(),
 });
 
 type OpeningHoursValue = Record<string, { open: string; close: string; closed: boolean }>;
@@ -58,7 +61,7 @@ export async function POST(request: Request) {
       .eq("id", parsed.data.shop_id)
       .maybeSingle(),
     admin.from("barbers").select("id, shop_id, is_active").eq("id", parsed.data.barber_id).maybeSingle(),
-    admin.from("services").select("id, shop_id, is_active, is_visible, price, currency").eq("id", parsed.data.service_id).maybeSingle(),
+    admin.from("services").select("id, shop_id, is_active, is_visible, price, currency, duration_min").eq("id", parsed.data.service_id).maybeSingle(),
     admin.from("shop_subscriptions").select("status, current_period_end").eq("shop_id", parsed.data.shop_id).maybeSingle(),
   ]);
 
@@ -92,8 +95,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "El dentista seleccionado no ofrece ese servicio" }, { status: 409 });
   }
 
+  const addonIds = [...new Set(parsed.data.addon_ids || [])];
+  const { data: addonsRaw, error: addonsError } = addonIds.length
+    ? await admin
+        .from("service_addons")
+        .select("id, service_id, name, price, duration_min, is_active")
+        .in("id", addonIds)
+    : { data: [], error: null };
+
+  if (addonsError) {
+    return NextResponse.json({ error: addonsError.message }, { status: 500 });
+  }
+
+  const addons = (addonsRaw || []).filter((addon) => addon.is_active !== false);
+  if (addons.length !== addonIds.length || addons.some((addon) => addon.service_id !== parsed.data.service_id)) {
+    return NextResponse.json({ error: "Hay add-ons inválidos para este servicio" }, { status: 409 });
+  }
+
   if (timeToMinutes(parsed.data.end_time) <= timeToMinutes(parsed.data.start_time)) {
     return NextResponse.json({ error: "Horario inválido" }, { status: 400 });
+  }
+
+  const expectedDuration =
+    Number(service.duration_min || 0) + addons.reduce((sum, addon) => sum + Number(addon.duration_min || 0), 0);
+  const requestedDuration = timeToMinutes(parsed.data.end_time) - timeToMinutes(parsed.data.start_time);
+  if (requestedDuration !== expectedDuration) {
+    return NextResponse.json({ error: "La duración elegida no coincide con el servicio y add-ons seleccionados" }, { status: 409 });
   }
 
   const openingHours = (shop.opening_hours || {}) as OpeningHoursValue;
@@ -124,21 +151,31 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "El horario ya no está disponible" }, { status: 409 });
   }
 
-  const paymentAmount = Number(shop.deposit_required && Number(shop.deposit_amount) > 0 ? shop.deposit_amount : service.price || 0);
+  const addonsTotal = addons.reduce((sum, addon) => sum + Number(addon.price || 0), 0);
+  const baseAmount = Number(service.price || 0) + addonsTotal;
+  const paymentAmount = Number(shop.deposit_required && Number(shop.deposit_amount) > 0 ? shop.deposit_amount : baseAmount);
   const paymentRequired = Boolean(shop.payments_enabled && shop.online_payment_mode === "required");
 
   const { data: booking, error } = await admin
     .from("bookings")
     .insert({
       client_id: client.id,
-      ...parsed.data,
+      barber_id: parsed.data.barber_id,
+      shop_id: parsed.data.shop_id,
+      service_id: parsed.data.service_id,
+      date: parsed.data.date,
+      start_time: parsed.data.start_time,
+      end_time: parsed.data.end_time,
       status: "confirmed",
       deposit_status: "none",
       deposit_amount: 0,
       payment_status: "pending",
       payment_required: paymentRequired,
+      base_amount: baseAmount,
       payment_amount: paymentAmount,
       payment_currency: service.currency || "DOP",
+      guest_count: parsed.data.guest_count,
+      notes: parsed.data.notes || null,
     })
     .select()
     .single();
@@ -146,6 +183,22 @@ export async function POST(request: Request) {
   if (error) {
     const message = error.message.includes("no_overlap") ? "El horario ya no está disponible" : error.message;
     return NextResponse.json({ error: message }, { status: 500 });
+  }
+
+  if (addons.length) {
+    const { error: bookingAddonsError } = await admin.from("booking_addons").insert(
+      addons.map((addon) => ({
+        booking_id: booking.id,
+        addon_id: addon.id,
+        name_snapshot: addon.name,
+        price_snapshot: addon.price,
+        duration_snapshot: addon.duration_min,
+      }))
+    );
+
+    if (bookingAddonsError) {
+      return NextResponse.json({ error: bookingAddonsError.message }, { status: 500 });
+    }
   }
 
   return NextResponse.json(booking, { status: 201 });

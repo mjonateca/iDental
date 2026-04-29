@@ -4,17 +4,18 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { addDays, format, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
-import { ArrowLeft, CheckCircle2, Clock, Home, Loader2, Scissors, UserRound } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock, Home, Loader2, Scissors, UserRound, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { formatCurrency, formatTime } from "@/lib/utils";
-import type { Barber, Client, Service, Shop } from "@/types/database";
+import type { Barber, Client, Service, ServiceAddon, Shop } from "@/types/database";
 
+type ServiceWithAddons = Service & { service_addons?: ServiceAddon[] };
 interface ShopWithRelations extends Shop {
   barbers: Array<Barber & { barber_services?: Array<{ service_id: string }> }>;
-  services: Service[];
+  services: ServiceWithAddons[];
 }
 
 interface Props {
@@ -108,20 +109,32 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
 
   const [step, setStep] = useState<Step>(preselectedBarber ? "service" : "barber");
   const [selectedBarber, setSelectedBarber] = useState<ShopWithRelations["barbers"][number] | null>(preselectedBarber);
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [selectedService, setSelectedService] = useState<ServiceWithAddons | null>(null);
+  const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [guestCount, setGuestCount] = useState(1);
+  const [visitNotes, setVisitNotes] = useState("");
   const [bookedSlots, setBookedSlots] = useState<BookedInterval[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [joiningWaitlist, setJoiningWaitlist] = useState(false);
 
   const compatibleServiceIds = new Set(selectedBarber?.barber_services?.map((item) => item.service_id) || []);
   const activeServices = shop.services.filter(
     (service) => service.is_active && service.is_visible !== false && (!selectedBarber || compatibleServiceIds.size === 0 || compatibleServiceIds.has(service.id))
   );
+  const selectedAddons = (selectedService?.service_addons || []).filter((addon) => selectedAddonIds.includes(addon.id));
+  const totalDuration = (selectedService?.duration_min || 0) + selectedAddons.reduce((sum, addon) => sum + Number(addon.duration_min || 0), 0);
+  const totalAmount = (selectedService?.price || 0) + selectedAddons.reduce((sum, addon) => sum + Number(addon.price || 0), 0);
   const dates = generateDates(14);
-  const availableSlots = selectedDate ? buildSlots(selectedDate, openingHours, selectedService?.duration_min || 30) : [];
+  const availableSlots = selectedDate ? buildSlots(selectedDate, openingHours, totalDuration || 30) : [];
   const selectedDayConfig = selectedDate ? openingHours[weekdayKey(selectedDate)] : null;
+
+  function toggleAddon(addonId: string) {
+    setSelectedTime(null);
+    setSelectedAddonIds((current) => (current.includes(addonId) ? current.filter((id) => id !== addonId) : [...current, addonId]));
+  }
 
   async function loadBookedSlots(barberId: string, date: Date) {
     setLoadingSlots(true);
@@ -145,6 +158,43 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
     setStep("datetime");
   }
 
+  async function handleJoinWaitlist() {
+    if (!selectedDate || !selectedService) return;
+    setJoiningWaitlist(true);
+
+    try {
+      const response = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shop_id: shop.id,
+          barber_id: selectedBarber?.id || null,
+          service_id: selectedService.id,
+          preferred_date: format(selectedDate, "yyyy-MM-dd"),
+          guest_count: guestCount,
+          notes: visitNotes || null,
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        toast({
+          variant: "destructive",
+          title: "No se pudo unir a la waitlist",
+          description: payload.error || "Inténtalo otra vez.",
+        });
+        return;
+      }
+
+      toast({
+        title: "Te uniste a la waitlist",
+        description: "La clínica dental ya puede priorizarte si se libera un espacio.",
+      });
+    } finally {
+      setJoiningWaitlist(false);
+    }
+  }
+
   async function handleConfirm() {
     if (!selectedBarber || !selectedService || !selectedDate || !selectedTime) return;
     setSubmitting(true);
@@ -158,7 +208,7 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
 
     const dateStr = format(selectedDate, "yyyy-MM-dd");
     const [hours, minutes] = selectedTime.split(":").map(Number);
-    const endTotal = hours * 60 + minutes + selectedService.duration_min;
+    const endTotal = hours * 60 + minutes + totalDuration;
     const endTime = minutesToTime(endTotal);
 
     try {
@@ -169,9 +219,12 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
           barber_id: selectedBarber.id,
           shop_id: shop.id,
           service_id: selectedService.id,
+          addon_ids: selectedAddonIds,
           date: dateStr,
           start_time: `${selectedTime}:00`,
           end_time: `${endTime}:00`,
+          guest_count: guestCount,
+          notes: visitNotes || null,
         }),
       });
 
@@ -335,6 +388,7 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
                   key={service.id}
                   onClick={() => {
                     setSelectedService(service);
+                    setSelectedAddonIds([]);
                     setSelectedTime(null);
                   }}
                   className={`flex w-full items-center justify-between rounded-lg border bg-background p-4 text-left transition-all ${
@@ -355,9 +409,69 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
               ))}
             </div>
             {selectedService && (
-              <Button className="w-full" onClick={() => setStep("datetime")}>
-                Elegir fecha y hora
-              </Button>
+              <div className="space-y-4 rounded-xl border bg-background p-4">
+                <div>
+                  <p className="font-medium">Add-ons opcionales</p>
+                  <p className="text-sm text-muted-foreground">Como en Fresha, puedes aumentar valor y duración antes de confirmar.</p>
+                </div>
+                {selectedService.service_addons?.filter((addon) => addon.is_active !== false).length ? (
+                  <div className="space-y-2">
+                    {selectedService.service_addons
+                      ?.filter((addon) => addon.is_active !== false)
+                      .map((addon) => {
+                        const checked = selectedAddonIds.includes(addon.id);
+                        return (
+                          <button
+                            key={addon.id}
+                            type="button"
+                            onClick={() => toggleAddon(addon.id)}
+                            className={`flex w-full items-center justify-between rounded-lg border p-3 text-left transition-all ${
+                              checked ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "hover:border-primary/40"
+                            }`}
+                          >
+                            <div>
+                              <p className="font-medium">{addon.name}</p>
+                              <p className="text-xs text-muted-foreground">+{addon.duration_min} min</p>
+                            </div>
+                            <p className="font-semibold text-primary">{formatCurrency(addon.price, selectedService.currency)}</p>
+                          </button>
+                        );
+                      })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Este servicio no tiene add-ons configurados.</p>
+                )}
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="space-y-2 text-sm">
+                    <span className="font-medium">Pacientes / invitados</span>
+                    <select
+                      value={guestCount}
+                      onChange={(event) => setGuestCount(Number(event.target.value))}
+                      className="flex h-11 w-full rounded-xl border border-input bg-background px-4 py-2 text-sm"
+                    >
+                      {Array.from({ length: 6 }, (_, index) => index + 1).map((value) => (
+                        <option key={value} value={value}>
+                          {value}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="space-y-2 text-sm">
+                    <span className="font-medium">Notas para la clínica dental</span>
+                    <textarea
+                      value={visitNotes}
+                      onChange={(event) => setVisitNotes(event.target.value)}
+                      placeholder="Motivo de consulta, preferencia o comentario relevante."
+                      className="min-h-[88px] w-full rounded-xl border border-input bg-background px-4 py-3 text-sm"
+                    />
+                  </label>
+                </div>
+
+                <Button className="w-full" onClick={() => setStep("datetime")}>
+                  Elegir fecha y hora
+                </Button>
+              </div>
             )}
           </div>
         )}
@@ -406,13 +520,17 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
                 ) : availableSlots.length === 0 ? (
-                  <p className="rounded-lg border bg-background p-4 text-sm text-muted-foreground">
-                    No hay horarios configurados para este día.
-                  </p>
+                  <div className="space-y-3 rounded-lg border bg-background p-4 text-sm text-muted-foreground">
+                    <p>No hay horarios configurados para este día.</p>
+                    <Button variant="outline" onClick={handleJoinWaitlist} disabled={joiningWaitlist}>
+                      {joiningWaitlist ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      Unirme a la waitlist
+                    </Button>
+                  </div>
                 ) : (
                   <div className="grid grid-cols-4 gap-2">
                     {availableSlots.map((slot) => {
-                      const duration = selectedService?.duration_min || 30;
+                      const duration = totalDuration || 30;
                       const slotEnd = minutesToTime(timeToMinutes(slot) + duration);
                       const dateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
                       const todayStr = format(new Date(), "yyyy-MM-dd");
@@ -439,6 +557,16 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
                     })}
                   </div>
                 )}
+              </div>
+            )}
+
+            {selectedDate && !loadingSlots && availableSlots.length > 0 && !selectedTime && (
+              <div className="rounded-lg border bg-background p-4 text-sm text-muted-foreground">
+                <p className="mb-3">Si no encuentras un espacio ideal, puedes unirte a la waitlist para esta fecha.</p>
+                <Button variant="outline" onClick={handleJoinWaitlist} disabled={joiningWaitlist}>
+                  {joiningWaitlist ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Unirme a la waitlist
+                </Button>
               </div>
             )}
 
@@ -473,6 +601,12 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
                   <span className="text-muted-foreground">Servicio</span>
                   <span className="font-medium">{selectedService?.name}</span>
                 </div>
+                {selectedAddons.length > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Add-ons</span>
+                    <span className="font-medium text-right">{selectedAddons.map((addon) => addon.name).join(", ")}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Fecha</span>
                   <span className="font-medium">{selectedDate && format(selectedDate, "EEEE d 'de' MMMM", { locale: es })}</span>
@@ -483,12 +617,25 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Duración</span>
-                  <span className="font-medium">{selectedService?.duration_min} min</span>
+                  <span className="font-medium">{totalDuration} min</span>
                 </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <Users className="h-3.5 w-3.5" />
+                    Pacientes
+                  </span>
+                  <span className="font-medium">{guestCount}</span>
+                </div>
+                {visitNotes && (
+                  <div className="space-y-1 border-t pt-3 text-sm">
+                    <span className="text-muted-foreground">Notas</span>
+                    <p className="font-medium">{visitNotes}</p>
+                  </div>
+                )}
                 <div className="flex justify-between border-t pt-3">
                   <span className="font-semibold">Total</span>
                   <span className="text-lg font-bold text-primary">
-                    {selectedService && formatCurrency(selectedService.price, selectedService.currency)}
+                    {selectedService && formatCurrency(totalAmount, selectedService.currency)}
                   </span>
                 </div>
                 {shop.payments_enabled && (
