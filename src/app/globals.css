@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 205 58% 13%;
+    --card: 0 0% 100%;
+    --card-foreground: 205 58% 13%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 205 58% 13%;
+    --primary: 201 87% 58%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 198 100% 96%;
+    --secondary-foreground: 205 58% 13%;
+    --muted: 198 100% 97%;
+    --muted-foreground: 204 22% 42%;
+    --accent: 188 77% 86%;
+    --accent-foreground: 205 58% 13%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 197 56% 89%;
+    --input: 197 56% 89%;
+    --ring: 201 87% 58%;
+    --radius: 0.9rem;
+  }
+
+  .dark {
+    --background: 205 58% 13%;
+    --foreground: 210 40% 98%;
+    --card: 205 58% 13%;
+    --card-foreground: 210 40% 98%;
+    --popover: 205 58% 13%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 198 92% 63%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 202 41% 22%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 202 41% 22%;
+    --muted-foreground: 199 28% 73%;
+    --accent: 201 38% 27%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 202 41% 22%;
+    --input: 202 41% 22%;
+    --ring: 198 92% 63%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Mobile-first safe area support (PWA) */
+@supports (padding: max(0px)) {
+  .safe-top    { padding-top: max(0px, env(safe-area-inset-top)); }
+  .safe-bottom { padding-bottom: max(0px, env(safe-area-inset-bottom)); }
+}
