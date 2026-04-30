@@ -27,7 +27,7 @@ export default async function DashboardLayout({
       <Suspense fallback={null}>
         <DashboardNav role={role} />
       </Suspense>
-      <main className="pb-20 md:pb-0 md:ml-60">
+      <main className="pb-20 md:pb-0 md:ml-72">
         {children}
       </main>
     </div>

@@ -3,19 +3,15 @@
 import { FormEvent, useMemo, useState } from "react";
 import type { InputHTMLAttributes } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
-  Bell,
   CalendarDays,
   CheckCircle,
   Clock,
   CreditCard,
   ExternalLink,
   Loader2,
-  Scissors,
-  Settings,
   TrendingUp,
-  UserRound,
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -37,7 +33,6 @@ import type {
   ShopPaymentMethod,
   ShopSubscription,
   SubscriptionStatus,
-  WaitlistEntry,
 } from "@/types/database";
 
 export interface BookingWithRelations {
@@ -106,13 +101,6 @@ interface Props {
   services: ServiceWithAddons[];
   barbers: BarberWithServices[];
   clients: ClientSummary[];
-  waitlistEntries: Array<
-    WaitlistEntry & {
-      clients?: { name: string; phone: string | null; whatsapp: string | null } | null;
-      barbers?: { display_name: string } | null;
-      services?: { name: string } | null;
-    }
-  >;
   notificationEvents: NotificationEvent[];
   subscription: ShopSubscription | null;
   paymentMethods: ShopPaymentMethod[];
@@ -122,19 +110,7 @@ interface Props {
   initialTab?: string;
 }
 
-const tabs = [
-  { id: "summary", label: "Resumen", icon: CheckCircle },
-  { id: "bookings", label: "Reservas", icon: CalendarDays },
-  { id: "services", label: "Servicios", icon: Scissors },
-  { id: "barbers", label: "Dentistas", icon: UserRound },
-  { id: "clients", label: "Clientes", icon: Users },
-  { id: "waitlist", label: "Waitlist", icon: Bell },
-  { id: "schedule", label: "Horarios", icon: Clock },
-  { id: "whatsapp", label: "WhatsApp", icon: Bell },
-  { id: "settings", label: "Ajustes", icon: Settings },
-] as const;
-
-type TabId = (typeof tabs)[number]["id"];
+type TabId = "summary" | "bookings" | "services" | "barbers" | "clients" | "schedule" | "whatsapp" | "settings";
 
 const STATUS_LABELS: Record<BookingStatus, string> = {
   pending: "Pendiente",
@@ -225,7 +201,6 @@ export default function DashboardClient({
   services: initialServices,
   barbers: initialBarbers,
   clients,
-  waitlistEntries: initialWaitlistEntries,
   notificationEvents,
   subscription,
   paymentMethods,
@@ -234,13 +209,11 @@ export default function DashboardClient({
   todayStr,
   initialTab = "summary",
 }: Props) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const currentTab = (searchParams.get("tab") || initialTab) as TabId;
   const [bookings, setBookings] = useState(initialBookings);
   const [services, setServices] = useState(initialServices);
   const [barbers, setBarbers] = useState(initialBarbers);
-  const [waitlistEntries, setWaitlistEntries] = useState(initialWaitlistEntries);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [shopState, setShopState] = useState(shop);
   const [openingHours, setOpeningHours] = useState<OpeningHoursValue>(() => normalizeOpeningHours(shop.opening_hours));
@@ -256,9 +229,14 @@ export default function DashboardClient({
     [clients]
   );
 
-  function goToTab(tab: TabId) {
-    router.push(`/dashboard?tab=${tab}`);
-  }
+  const occupancyRate = stats.upcomingConfirmed ? Math.min(100, Math.round((todayBookings.length / stats.upcomingConfirmed) * 100)) : 0;
+  const completedShare = analytics.totalsByStatus.total
+    ? Math.round((analytics.totalsByStatus.completed / analytics.totalsByStatus.total) * 100)
+    : 0;
+  const nextBooking = bookings.find((booking) => booking.status !== "cancelled");
+  const topDentist = analytics.topBarbers[0];
+  const topService = analytics.topServices[0];
+  const todayRevenue = todayBookings.reduce((sum, booking) => sum + Number(booking.base_amount || booking.services?.price || 0), 0);
 
   function updateDay(day: keyof OpeningHoursValue, field: "open" | "close" | "closed", value: string | boolean) {
     setOpeningHours((current) => ({
@@ -415,20 +393,6 @@ export default function DashboardClient({
     );
   }
 
-  async function updateWaitlistEntry(waitlistId: string, status: WaitlistEntry["status"]) {
-    const response = await fetch(`/api/waitlist/${waitlistId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      toast({ variant: "destructive", title: "No se actualizó la waitlist", description: payload.error });
-      return;
-    }
-    setWaitlistEntries((prev) => prev.map((entry) => (entry.id === waitlistId ? { ...entry, ...payload } : entry)));
-  }
-
   async function saveSchedule(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSavingSchedule(true);
@@ -491,11 +455,12 @@ export default function DashboardClient({
   }
 
   return (
-    <div className="max-w-6xl p-4 md:p-8">
+    <div className="max-w-7xl p-4 md:p-8">
       <div className="mb-7 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">{shopState.name}</h1>
-          <p className="text-muted-foreground capitalize">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">Panel Clinico</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight">{shopState.name}</h1>
+          <p className="mt-1 text-muted-foreground capitalize">
             {shopState.city ? `${shopState.city} · ` : ""}
             {todayStr}
           </p>
@@ -516,37 +481,106 @@ export default function DashboardClient({
         </div>
       </div>
 
-      <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => goToTab(tab.id)}
-            className={`h-10 rounded-lg border px-3 text-sm font-medium whitespace-nowrap ${
-              currentTab === tab.id ? "border-primary bg-primary text-white" : "bg-background"
-            }`}
-          >
-            <tab.icon className="mr-1.5 inline h-4 w-4" />
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
       {currentTab === "summary" && (
-        <div className="space-y-5">
-          <div className="grid gap-4 md:grid-cols-3">
-            <Metric title="Citas hoy" value={todayBookings.length} icon={Clock} />
-            <Metric title="Esperado hoy" value={formatCurrency(stats.expectedToday)} icon={TrendingUp} />
-            <Metric title="Esperado semana" value={formatCurrency(stats.expectedWeek)} icon={CalendarDays} />
+        <div className="space-y-6">
+          <section className="grid gap-4 xl:grid-cols-[1.7fr_1fr]">
+            <div className="overflow-hidden rounded-[28px] bg-[linear-gradient(135deg,#0f4667_0%,#2d8fd0_48%,#8fd7ff_100%)] p-6 text-white shadow-[0_24px_60px_rgba(29,113,173,0.22)]">
+              <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+                <div className="max-w-2xl">
+                  <p className="text-sm font-medium text-white/70">Vista ejecutiva del dia</p>
+                  <h2 className="mt-2 text-3xl font-bold tracking-tight">Operacion, ingresos y equipo en una sola pantalla.</h2>
+                  <p className="mt-3 max-w-xl text-sm text-white/78">
+                    Ve lo urgente primero: agenda de hoy, rendimiento del equipo, ticket promedio y salud de cobros sin perder el tono ligero de la app.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <HeroMetric title="Hoy" value={todayBookings.length} detail="citas activas" />
+                  <HeroMetric title="Facturacion" value={formatCurrency(todayRevenue)} detail="programada" />
+                  <HeroMetric title="Ocupacion" value={`${occupancyRate}%`} detail="de la agenda" />
+                  <HeroMetric title="Completadas" value={`${completedShare}%`} detail="del historico" />
+                </div>
+              </div>
+            </div>
+
+            <Card className="border-white/70 bg-white/80 shadow-none backdrop-blur">
+              <CardHeader>
+                <CardTitle>Radar operativo</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <RadarRow
+                  label="Proxima cita"
+                  value={
+                    nextBooking
+                      ? `${nextBooking.clients?.name || "Cliente"} · ${nextBooking.date} · ${formatTime(nextBooking.start_time.slice(0, 5))}`
+                      : "Sin reservas pendientes"
+                  }
+                />
+                <RadarRow
+                  label="Dentista mas solicitado"
+                  value={topDentist ? `${topDentist.name} · ${topDentist.count} reservas` : "Todavia sin datos"}
+                />
+                <RadarRow
+                  label="Servicio dominante"
+                  value={topService ? `${topService.name} · ${formatCurrency(topService.revenue)}` : "Todavia sin datos"}
+                />
+                <RadarRow
+                  label="Clientes recurrentes"
+                  value={`${analytics.recurrentClients} pacientes con repeticion`}
+                />
+              </CardContent>
+            </Card>
+          </section>
+
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <Metric title="Ingresos esperados hoy" value={formatCurrency(stats.expectedToday)} icon={TrendingUp} />
+            <Metric title="Ingresos esperados semana" value={formatCurrency(stats.expectedWeek)} icon={CalendarDays} />
+            <Metric title="Ticket medio" value={formatCurrency(analytics.avgTicket)} icon={CreditCard} />
+            <Metric title="Tiempo medio servicio" value={`${analytics.avgServiceTime} min`} icon={Clock} />
             <Metric title="Total reservas" value={analytics.totalsByStatus.total} icon={CalendarDays} />
             <Metric title="Confirmadas" value={analytics.totalsByStatus.confirmed} icon={CheckCircle} />
             <Metric title="Pendientes" value={analytics.totalsByStatus.pending} icon={Clock} />
             <Metric title="Canceladas" value={analytics.totalsByStatus.cancelled} icon={Users} />
-            <Metric title="Ingresos estimados" value={formatCurrency(analytics.estimatedRevenue)} icon={Scissors} />
-            <Metric title="Ingresos cobrados" value={formatCurrency(analytics.realizedRevenue)} icon={TrendingUp} />
-            <Metric title="Ticket medio" value={formatCurrency(analytics.avgTicket)} icon={CreditCard} />
-            <Metric title="Tiempo medio servicio" value={`${analytics.avgServiceTime} min`} icon={Clock} />
-            <Metric title="Clientes recurrentes" value={analytics.recurrentClients} icon={Users} />
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+            <Card className="border-white/70 bg-white/85 shadow-none backdrop-blur">
+              <CardHeader>
+                <CardTitle>Agenda inmediata</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {todayBookings.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No hay citas para hoy.</p>
+                ) : (
+                  todayBookings.slice(0, 6).map((booking) => (
+                    <div key={booking.id} className="flex items-start justify-between rounded-2xl border border-sky-100 bg-sky-50/50 p-4">
+                      <div>
+                        <p className="font-medium">{booking.clients?.name || "Cliente"}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {formatTime(booking.start_time.slice(0, 5))} · {booking.services?.name} · {booking.barbers?.display_name}
+                        </p>
+                        {booking.booking_addons?.length ? (
+                          <p className="text-xs text-muted-foreground">Add-ons: {booking.booking_addons.map((addon) => addon.name_snapshot).join(", ")}</p>
+                        ) : null}
+                      </div>
+                      <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-sky-800 shadow-sm">
+                        {STATUS_LABELS[booking.status]}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-white/70 bg-white/85 shadow-none backdrop-blur">
+              <CardHeader>
+                <CardTitle>Salud comercial</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <HealthBar label="Cobrado vs estimado" value={analytics.estimatedRevenue ? Math.round((analytics.realizedRevenue / analytics.estimatedRevenue) * 100) : 0} />
+                <HealthBar label="Reservas completadas" value={completedShare} tone="emerald" />
+                <HealthBar label="Agenda confirmada" value={analytics.totalsByStatus.total ? Math.round((analytics.totalsByStatus.confirmed / analytics.totalsByStatus.total) * 100) : 0} tone="sky" />
+              </CardContent>
+            </Card>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
@@ -594,7 +628,7 @@ export default function DashboardClient({
             />
           </div>
 
-          <Card className="shadow-none">
+          <Card className="border-white/70 bg-white/85 shadow-none backdrop-blur">
             <CardHeader>
               <CardTitle>Suscripción y cobros</CardTitle>
             </CardHeader>
@@ -768,49 +802,6 @@ export default function DashboardClient({
 
       {currentTab === "clients" && <SimpleList title="Clientes" empty="Aún no hay clientes con reservas." items={clientItems} />}
 
-      {currentTab === "waitlist" && (
-        <Card className="shadow-none">
-          <CardHeader>
-            <CardTitle>Waitlist</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {waitlistEntries.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Todavía no hay solicitudes en waitlist.</p>
-            ) : (
-              waitlistEntries.map((entry) => (
-                <div key={entry.id} className="rounded-xl border p-4">
-                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                    <div>
-                      <p className="font-medium">{entry.clients?.name || "Cliente"}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {entry.preferred_date}
-                        {entry.preferred_start_time ? ` · ${formatTime(entry.preferred_start_time.slice(0, 5))}` : ""}
-                        {entry.services?.name ? ` · ${entry.services.name}` : ""}
-                        {entry.barbers?.display_name ? ` · ${entry.barbers.display_name}` : ""}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Estado: {entry.status}</p>
-                      {entry.guest_count > 1 ? <p className="text-xs text-muted-foreground">Pacientes: {entry.guest_count}</p> : null}
-                      {entry.notes ? <p className="text-xs text-muted-foreground">Notas: {entry.notes}</p> : null}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button size="sm" variant="outline" onClick={() => updateWaitlistEntry(entry.id, "notified")}>
-                        Notificado
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => updateWaitlistEntry(entry.id, "booked")}>
-                        Convertido
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => updateWaitlistEntry(entry.id, "cancelled")}>
-                        Cancelar
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-      )}
-
       {currentTab === "schedule" && (
         <Card className="shadow-none">
           <CardHeader>
@@ -890,9 +881,9 @@ export default function DashboardClient({
 
 function Metric({ title, value, icon: Icon }: { title: string; value: number | string; icon: typeof Clock }) {
   return (
-    <Card className="shadow-none">
+    <Card className="overflow-hidden border-white/70 bg-white/85 shadow-none backdrop-blur">
       <CardContent className="flex items-center gap-3 p-4">
-        <div className="rounded-xl bg-primary/10 p-2.5">
+        <div className="rounded-2xl bg-primary/10 p-2.5">
           <Icon className="h-5 w-5 text-primary" />
         </div>
         <div>
@@ -901,6 +892,47 @@ function Metric({ title, value, icon: Icon }: { title: string; value: number | s
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function HeroMetric({ title, value, detail }: { title: string; value: string | number; detail: string }) {
+  return (
+    <div className="rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur">
+      <p className="text-xs uppercase tracking-[0.18em] text-white/65">{title}</p>
+      <p className="mt-2 text-2xl font-bold">{value}</p>
+      <p className="mt-1 text-xs text-white/70">{detail}</p>
+    </div>
+  );
+}
+
+function RadarRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-sky-100 bg-sky-50/60 p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">{label}</p>
+      <p className="mt-2 text-sm font-medium text-foreground">{value}</p>
+    </div>
+  );
+}
+
+function HealthBar({ label, value, tone = "amber" }: { label: string; value: number; tone?: "amber" | "emerald" | "sky" }) {
+  const width = `${Math.max(0, Math.min(100, value))}%`;
+  const toneClass =
+    tone === "emerald"
+      ? "from-emerald-400 to-emerald-600"
+      : tone === "sky"
+        ? "from-sky-400 to-sky-600"
+        : "from-amber-300 to-amber-500";
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between text-sm">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="font-medium">{Math.max(0, Math.min(100, value))}%</span>
+      </div>
+      <div className="h-3 rounded-full bg-sky-50">
+        <div className={`h-3 rounded-full bg-gradient-to-r ${toneClass}`} style={{ width }} />
+      </div>
+    </div>
   );
 }
 

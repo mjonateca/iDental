@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { addDays, format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { Metadata } from "next";
-import type { Barber, Client, ClientPaymentMethod, Profile, Service, Shop, ShopPaymentMethod, ShopSubscription, WaitlistEntry } from "@/types/database";
+import type { Barber, Client, ClientPaymentMethod, Profile, Service, Shop, ShopPaymentMethod, ShopSubscription } from "@/types/database";
 import { ensureAccountRecords } from "@/lib/account-repair";
 import { IS_DEMO, demoBookings, demoShop } from "@/lib/demo-data";
 import { buildShopAnalytics } from "@/lib/shop-analytics";
@@ -31,7 +31,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         services={[]}
         barbers={[]}
         clients={[]}
-        waitlistEntries={[]}
         notificationEvents={[]}
         subscription={null}
         paymentMethods={[]}
@@ -180,7 +179,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     { data: weekBookingsRaw },
     { data: subscriptionRaw },
     { data: paymentMethodsRaw },
-    { data: waitlistEntriesRaw },
   ] =
     await Promise.all([
       admin
@@ -210,12 +208,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         .not("status", "in", '("cancelled","no_show")'),
       admin.from("shop_subscriptions").select("*").eq("shop_id", shop.id).maybeSingle(),
       admin.from("shop_payment_methods").select("*").eq("shop_id", shop.id).order("is_default", { ascending: false }),
-      admin
-        .from("waitlist_entries")
-        .select("*, clients(name, phone, whatsapp), barbers(display_name), services(name)")
-        .eq("shop_id", shop.id)
-        .order("preferred_date")
-        .order("created_at"),
     ]);
 
   type BookingWithRelations = import("./dashboard-client").BookingWithRelations;
@@ -247,7 +239,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       services={(services || []) as never}
       barbers={(barbers || []) as never}
       clients={(clients || []) as never}
-      waitlistEntries={(waitlistEntriesRaw || []) as WaitlistEntry[]}
       notificationEvents={(notificationEvents || []) as never}
       subscription={subscriptionRaw as ShopSubscription | null}
       paymentMethods={(paymentMethodsRaw || []) as ShopPaymentMethod[]}

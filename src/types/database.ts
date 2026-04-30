@@ -20,7 +20,6 @@ export type DepositStatus = "none" | "paid" | "refunded";
 export type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
 export type SubscriptionStatus = "trial" | "active" | "past_due" | "cancelled" | "expired";
 export type OnlinePaymentMode = "disabled" | "optional" | "required";
-export type WaitlistStatus = "pending" | "notified" | "booked" | "cancelled" | "expired";
 export type NotificationType =
   | "booking_confirmed"
   | "booking_reminder"
@@ -238,22 +237,6 @@ export interface Review {
   barber_id: string;
   rating: number;
   comment: string | null;
-  created_at: string;
-}
-
-export interface WaitlistEntry {
-  id: string;
-  shop_id: string;
-  client_id: string;
-  barber_id: string | null;
-  service_id: string | null;
-  preferred_date: string;
-  preferred_start_time: string | null;
-  preferred_end_time: string | null;
-  guest_count: number;
-  notes: string | null;
-  status: WaitlistStatus;
-  notified_at: string | null;
   created_at: string;
 }
 

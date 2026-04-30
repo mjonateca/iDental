@@ -118,7 +118,6 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
   const [bookedSlots, setBookedSlots] = useState<BookedInterval[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [joiningWaitlist, setJoiningWaitlist] = useState(false);
 
   const compatibleServiceIds = new Set(selectedBarber?.barber_services?.map((item) => item.service_id) || []);
   const activeServices = shop.services.filter(
@@ -156,43 +155,6 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
       await loadBookedSlots(selectedBarber.id, date);
     }
     setStep("datetime");
-  }
-
-  async function handleJoinWaitlist() {
-    if (!selectedDate || !selectedService) return;
-    setJoiningWaitlist(true);
-
-    try {
-      const response = await fetch("/api/waitlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          shop_id: shop.id,
-          barber_id: selectedBarber?.id || null,
-          service_id: selectedService.id,
-          preferred_date: format(selectedDate, "yyyy-MM-dd"),
-          guest_count: guestCount,
-          notes: visitNotes || null,
-        }),
-      });
-
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        toast({
-          variant: "destructive",
-          title: "No se pudo unir a la waitlist",
-          description: payload.error || "Inténtalo otra vez.",
-        });
-        return;
-      }
-
-      toast({
-        title: "Te uniste a la waitlist",
-        description: "La clínica dental ya puede priorizarte si se libera un espacio.",
-      });
-    } finally {
-      setJoiningWaitlist(false);
-    }
   }
 
   async function handleConfirm() {
@@ -520,13 +482,9 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
                 ) : availableSlots.length === 0 ? (
-                  <div className="space-y-3 rounded-lg border bg-background p-4 text-sm text-muted-foreground">
-                    <p>No hay horarios configurados para este día.</p>
-                    <Button variant="outline" onClick={handleJoinWaitlist} disabled={joiningWaitlist}>
-                      {joiningWaitlist ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                      Unirme a la waitlist
-                    </Button>
-                  </div>
+                  <p className="rounded-lg border bg-background p-4 text-sm text-muted-foreground">
+                    No hay horarios configurados para este día.
+                  </p>
                 ) : (
                   <div className="grid grid-cols-4 gap-2">
                     {availableSlots.map((slot) => {
@@ -557,16 +515,6 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
                     })}
                   </div>
                 )}
-              </div>
-            )}
-
-            {selectedDate && !loadingSlots && availableSlots.length > 0 && !selectedTime && (
-              <div className="rounded-lg border bg-background p-4 text-sm text-muted-foreground">
-                <p className="mb-3">Si no encuentras un espacio ideal, puedes unirte a la waitlist para esta fecha.</p>
-                <Button variant="outline" onClick={handleJoinWaitlist} disabled={joiningWaitlist}>
-                  {joiningWaitlist ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Unirme a la waitlist
-                </Button>
               </div>
             )}
 
