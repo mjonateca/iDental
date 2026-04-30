@@ -11,6 +11,7 @@ import {
   CreditCard,
   ExternalLink,
   Loader2,
+  ShieldCheck,
   TrendingUp,
   Users,
 } from "lucide-react";
@@ -229,14 +230,41 @@ export default function DashboardClient({
     [clients]
   );
 
+  const bookingStatusCounts = bookings.reduce(
+    (acc, booking) => {
+      acc.total += 1;
+      acc[booking.status] += 1;
+      return acc;
+    },
+    {
+      total: 0,
+      pending: 0,
+      confirmed: 0,
+      rescheduled: 0,
+      completed: 0,
+      no_show: 0,
+      cancelled: 0,
+    } as Record<BookingStatus | "total", number>
+  );
   const occupancyRate = stats.upcomingConfirmed ? Math.min(100, Math.round((todayBookings.length / stats.upcomingConfirmed) * 100)) : 0;
-  const completedShare = analytics.totalsByStatus.total
-    ? Math.round((analytics.totalsByStatus.completed / analytics.totalsByStatus.total) * 100)
+  const completedShare = bookingStatusCounts.total
+    ? Math.min(100, Math.round((bookingStatusCounts.completed / bookingStatusCounts.total) * 100))
     : 0;
   const nextBooking = bookings.find((booking) => booking.status !== "cancelled");
   const topDentist = analytics.topBarbers[0];
   const topService = analytics.topServices[0];
   const todayRevenue = todayBookings.reduce((sum, booking) => sum + Number(booking.base_amount || booking.services?.price || 0), 0);
+  const upcomingBookings = bookings.filter((booking) => !["cancelled", "completed"].includes(booking.status));
+  const pendingBookings = bookings.filter((booking) => booking.status === "pending");
+  const paidBookings = bookings.filter((booking) => booking.payment_status === "paid");
+  const bookingsWithNotes = bookings.filter((booking) => booking.notes?.trim());
+  const activeServices = services.filter((service) => service.is_active);
+  const addonsCount = services.reduce((sum, service) => sum + (service.service_addons?.length || 0), 0);
+  const avgServicePrice = services.length ? Math.round(services.reduce((sum, service) => sum + service.price, 0) / services.length) : 0;
+  const avgServiceDuration = services.length ? Math.round(services.reduce((sum, service) => sum + service.duration_min, 0) / services.length) : 0;
+  const activeBarbers = barbers.filter((barber) => barber.is_active);
+  const specialtiesCount = new Set(barbers.map((barber) => barber.specialty?.trim()).filter(Boolean)).size;
+  const serviceNameById = new Map(services.map((service) => [service.id, service.name]));
 
   function updateDay(day: keyof OpeningHoursValue, field: "open" | "close" | "closed", value: string | boolean) {
     setOpeningHours((current) => ({
@@ -536,10 +564,10 @@ export default function DashboardClient({
             <Metric title="Ingresos esperados semana" value={formatCurrency(stats.expectedWeek)} icon={CalendarDays} />
             <Metric title="Ticket medio" value={formatCurrency(analytics.avgTicket)} icon={CreditCard} />
             <Metric title="Tiempo medio servicio" value={`${analytics.avgServiceTime} min`} icon={Clock} />
-            <Metric title="Total reservas" value={analytics.totalsByStatus.total} icon={CalendarDays} />
-            <Metric title="Confirmadas" value={analytics.totalsByStatus.confirmed} icon={CheckCircle} />
-            <Metric title="Pendientes" value={analytics.totalsByStatus.pending} icon={Clock} />
-            <Metric title="Canceladas" value={analytics.totalsByStatus.cancelled} icon={Users} />
+            <Metric title="Total reservas" value={bookingStatusCounts.total} icon={CalendarDays} />
+            <Metric title="Confirmadas" value={bookingStatusCounts.confirmed} icon={CheckCircle} />
+            <Metric title="Pendientes" value={bookingStatusCounts.pending} icon={Clock} />
+            <Metric title="Canceladas" value={bookingStatusCounts.cancelled} icon={Users} />
           </div>
 
           <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
@@ -578,7 +606,11 @@ export default function DashboardClient({
               <CardContent className="space-y-4">
                 <HealthBar label="Cobrado vs estimado" value={analytics.estimatedRevenue ? Math.round((analytics.realizedRevenue / analytics.estimatedRevenue) * 100) : 0} />
                 <HealthBar label="Reservas completadas" value={completedShare} tone="emerald" />
-                <HealthBar label="Agenda confirmada" value={analytics.totalsByStatus.total ? Math.round((analytics.totalsByStatus.confirmed / analytics.totalsByStatus.total) * 100) : 0} tone="sky" />
+                <HealthBar
+                  label="Agenda confirmada"
+                  value={bookingStatusCounts.total ? Math.round((bookingStatusCounts.confirmed / bookingStatusCounts.total) * 100) : 0}
+                  tone="sky"
+                />
               </CardContent>
             </Card>
           </div>
@@ -678,124 +710,268 @@ export default function DashboardClient({
       )}
 
       {currentTab === "bookings" && (
-        <Card className="shadow-none">
-          <CardHeader>
-            <CardTitle>Reservas próximas</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {bookings.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No hay reservas próximas.</p>
-            ) : (
-              bookings.map((booking) => (
-                <div key={booking.id} className="flex flex-col gap-3 rounded-xl border p-4 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <p className="font-medium">{booking.clients?.name || "Cliente"}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {booking.date} · {formatTime(booking.start_time.slice(0, 5))} · {booking.services?.name} · {booking.barbers?.display_name}
-                    </p>
-                    {booking.booking_addons?.length ? (
-                      <p className="text-xs text-muted-foreground">Add-ons: {booking.booking_addons.map((addon) => addon.name_snapshot).join(", ")}</p>
-                    ) : null}
-                    {booking.guest_count && booking.guest_count > 1 ? (
-                      <p className="text-xs text-muted-foreground">Pacientes: {booking.guest_count}</p>
-                    ) : null}
-                    {booking.notes ? <p className="text-xs text-muted-foreground">Notas: {booking.notes}</p> : null}
-                    <p className="text-xs text-muted-foreground">{STATUS_LABELS[booking.status]}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {PAYMENT_STATUS_LABELS[booking.payment_status]}
-                      {booking.payment_amount > 0 ? ` · ${formatCurrency(booking.payment_amount, booking.payment_currency)}` : ""}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {(["confirmed", "completed", "cancelled"] as BookingStatus[]).map((status) => (
-                      <Button key={status} size="sm" variant="outline" disabled={updatingId === booking.id} onClick={() => updateBooking(booking.id, status)}>
-                        {updatingId === booking.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : STATUS_LABELS[status]}
-                      </Button>
-                    ))}
-                  </div>
+        <div className="space-y-4">
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <Metric title="Por atender" value={upcomingBookings.length} icon={CalendarDays} />
+            <Metric title="Pendientes" value={pendingBookings.length} icon={Clock} />
+            <Metric title="Pagadas" value={paidBookings.length} icon={ShieldCheck} />
+            <Metric title="Con notas clínicas" value={bookingsWithNotes.length} icon={Users} />
+          </section>
+
+          <div className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
+            <Card className="overflow-hidden border-white/70 bg-white/85 shadow-none backdrop-blur">
+              <CardHeader className="flex flex-row items-start justify-between gap-4">
+                <div>
+                  <CardTitle>Agenda operativa</CardTitle>
+                  <p className="mt-1 text-sm text-muted-foreground">Reserva, estado clínico y cobro en una sola vista.</p>
                 </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
+                <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-800">
+                  {bookings.length} reservas
+                </span>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {bookings.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No hay reservas próximas.</p>
+                ) : (
+                  bookings.map((booking) => (
+                    <div key={booking.id} className="rounded-[24px] border border-sky-100 bg-[linear-gradient(180deg,rgba(240,249,255,0.95)_0%,rgba(255,255,255,0.98)_100%)] p-4">
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="space-y-3">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-lg font-semibold">{booking.clients?.name || "Cliente"}</p>
+                              <Tag tone="sky">{STATUS_LABELS[booking.status]}</Tag>
+                              <Tag tone={booking.payment_status === "paid" ? "emerald" : booking.payment_status === "failed" ? "rose" : "slate"}>
+                                {PAYMENT_STATUS_LABELS[booking.payment_status]}
+                              </Tag>
+                            </div>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {booking.date} · {formatTime(booking.start_time.slice(0, 5))} a {formatTime(booking.end_time.slice(0, 5))}
+                            </p>
+                          </div>
+
+                          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                            <MiniStat label="Tratamiento" value={booking.services?.name || "Sin servicio"} />
+                            <MiniStat label="Dentista" value={booking.barbers?.display_name || "Sin asignar"} />
+                            <MiniStat label="Pacientes" value={booking.guest_count && booking.guest_count > 1 ? String(booking.guest_count) : "1"} />
+                            <MiniStat
+                              label="Importe"
+                              value={booking.payment_amount > 0 ? formatCurrency(booking.payment_amount, booking.payment_currency) : "Por definir"}
+                            />
+                          </div>
+
+                          {booking.booking_addons?.length ? (
+                              <div className="flex flex-wrap gap-2">
+                                {booking.booking_addons.map((addon) => (
+                                <Tag key={`${booking.id}-${addon.addon_id}-${addon.name_snapshot}`} tone="slate">
+                                  {addon.name_snapshot}
+                                </Tag>
+                              ))}
+                            </div>
+                          ) : null}
+
+                          {booking.notes ? (
+                            <div className="rounded-2xl border border-sky-100 bg-white px-3 py-2 text-sm text-slate-600">
+                              {booking.notes}
+                            </div>
+                          ) : null}
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 lg:max-w-[220px] lg:justify-end">
+                          {(["confirmed", "completed", "cancelled"] as BookingStatus[]).map((status) => (
+                            <Button key={status} size="sm" variant="outline" disabled={updatingId === booking.id} onClick={() => updateBooking(booking.id, status)}>
+                              {updatingId === booking.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : STATUS_LABELS[status]}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-white/70 bg-white/85 shadow-none backdrop-blur">
+              <CardHeader>
+                <CardTitle>Lectura rápida</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <RadarRow
+                  label="Próxima cita"
+                  value={
+                    nextBooking
+                      ? `${nextBooking.clients?.name || "Cliente"} · ${formatTime(nextBooking.start_time.slice(0, 5))}`
+                      : "No hay movimientos pendientes"
+                  }
+                />
+                <RadarRow
+                  label="Cobro confirmado"
+                  value={`${paidBookings.length} de ${bookings.length || 0} reservas ya están pagadas`}
+                />
+                <RadarRow
+                  label="Pendiente de decisión"
+                  value={`${pendingBookings.length} reservas requieren confirmación o cancelación`}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       )}
 
       {currentTab === "services" && (
         <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
-          <Card className="shadow-none">
-            <CardHeader>
-              <CardTitle>Servicios</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {services.map((service) => (
-                <div key={service.id} className="rounded-xl border p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-medium">{service.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {service.category || "General"} · {service.duration_min} min · {formatCurrency(service.price, service.currency)}
-                      </p>
-                    </div>
-                    <Button variant="outline" size="sm" onClick={() => toggleService(service)}>
-                      {service.is_active ? "Desactivar" : "Activar"}
-                    </Button>
-                  </div>
+          <div className="space-y-4">
+            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <Metric title="Servicios activos" value={activeServices.length} icon={CheckCircle} />
+              <Metric title="Add-ons activos" value={addonsCount} icon={TrendingUp} />
+              <Metric title="Precio medio" value={formatCurrency(avgServicePrice)} icon={CreditCard} />
+              <Metric title="Duración media" value={`${avgServiceDuration} min`} icon={Clock} />
+            </section>
 
-                  <div className="mt-4 space-y-2">
-                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Add-ons</p>
-                    {(service.service_addons || []).length ? (
-                      (service.service_addons || []).map((addon) => (
-                        <div key={addon.id} className="flex items-center justify-between rounded-lg border p-3 text-sm">
-                          <div>
-                            <p className="font-medium">{addon.name}</p>
-                            <p className="text-muted-foreground">
-                              +{addon.duration_min} min · {formatCurrency(addon.price, service.currency)}
-                            </p>
-                          </div>
-                          <Button variant="ghost" size="sm" onClick={() => deleteAddon(service.id, addon.id)}>
-                            Quitar
-                          </Button>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-muted-foreground">Todavía no hay add-ons para este servicio.</p>
-                    )}
-                    <form onSubmit={(event) => createAddon(service.id, event)} className="grid gap-2 sm:grid-cols-[1fr_110px_110px_auto]">
-                      <Input name="name" placeholder="Add-on" required />
-                      <Input name="duration_min" type="number" min="0" defaultValue="10" placeholder="Min" required />
-                      <Input name="price" type="number" min="0" defaultValue="500" placeholder="Precio" required />
-                      <Button type="submit">Agregar</Button>
-                    </form>
-                  </div>
+            <Card className="overflow-hidden border-white/70 bg-white/85 shadow-none backdrop-blur">
+              <CardHeader className="flex flex-row items-start justify-between gap-4">
+                <div>
+                  <CardTitle>Catálogo clínico</CardTitle>
+                  <p className="mt-1 text-sm text-muted-foreground">Controla visibilidad, estructura de precio y add-ons por tratamiento.</p>
                 </div>
-              ))}
-            </CardContent>
-          </Card>
+                <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-800">
+                  {services.length} servicios
+                </span>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {services.map((service) => (
+                  <div key={service.id} className="rounded-[24px] border border-sky-100 bg-[linear-gradient(180deg,rgba(240,249,255,0.95)_0%,rgba(255,255,255,0.98)_100%)] p-4">
+                    <div className="flex flex-col gap-4">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-lg font-semibold">{service.name}</p>
+                            <Tag tone={service.is_active ? "emerald" : "slate"}>{service.is_active ? "Activo" : "Inactivo"}</Tag>
+                            <Tag tone="sky">{service.category || "General"}</Tag>
+                          </div>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {service.description || "Sin descripción pública todavía."}
+                          </p>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={() => toggleService(service)}>
+                          {service.is_active ? "Desactivar" : "Activar"}
+                        </Button>
+                      </div>
+
+                      <div className="grid gap-2 sm:grid-cols-3">
+                        <MiniStat label="Duración" value={`${service.duration_min} min`} />
+                        <MiniStat label="Precio base" value={formatCurrency(service.price, service.currency)} />
+                        <MiniStat label="Add-ons" value={String(service.service_addons?.length || 0)} />
+                      </div>
+
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">Add-ons disponibles</p>
+                        {(service.service_addons || []).length ? (
+                          <div className="grid gap-2">
+                            {(service.service_addons || []).map((addon) => (
+                              <div key={addon.id} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm">
+                                <div>
+                                  <p className="font-medium">{addon.name}</p>
+                                  <p className="text-muted-foreground">
+                                    +{addon.duration_min} min · {formatCurrency(addon.price, service.currency)}
+                                  </p>
+                                </div>
+                                <Button variant="ghost" size="sm" onClick={() => deleteAddon(service.id, addon.id)}>
+                                  Quitar
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">Todavía no hay add-ons para este servicio.</p>
+                        )}
+                        <form onSubmit={(event) => createAddon(service.id, event)} className="grid gap-2 sm:grid-cols-[1fr_110px_110px_auto]">
+                          <Input name="name" placeholder="Add-on" required />
+                          <Input name="duration_min" type="number" min="0" defaultValue="10" placeholder="Min" required />
+                          <Input name="price" type="number" min="0" defaultValue="500" placeholder="Precio" required />
+                          <Button type="submit">Agregar</Button>
+                        </form>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
           <CreateServiceForm onSubmit={createService} />
         </div>
       )}
 
       {currentTab === "barbers" && (
         <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
-          <Card className="shadow-none">
-            <CardHeader>
-              <CardTitle>Dentistas</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {barbers.map((barber) => (
-                <div key={barber.id} className="flex items-center justify-between gap-3 rounded-xl border p-4">
-                  <div>
-                    <p className="font-medium">{barber.display_name}</p>
-                    <p className="text-sm text-muted-foreground">{barber.specialty || "Sin especialidad"}</p>
-                    <p className="text-xs text-muted-foreground">{barber.barber_services?.length || 0} servicios asignados</p>
-                  </div>
-                  <Button variant="outline" size="sm" onClick={() => toggleBarber(barber)}>
-                    {barber.is_active ? "Desactivar" : "Activar"}
-                  </Button>
+          <div className="space-y-4">
+            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <Metric title="Dentistas activos" value={activeBarbers.length} icon={Users} />
+              <Metric title="Especialidades" value={specialtiesCount} icon={ShieldCheck} />
+              <Metric title="Top performer" value={topDentist?.name || "Sin datos"} icon={TrendingUp} />
+              <Metric title="Promedio servicios" value={barbers.length ? Math.round(barbers.reduce((sum, barber) => sum + (barber.barber_services?.length || 0), 0) / barbers.length) : 0} icon={CheckCircle} />
+            </section>
+
+            <Card className="overflow-hidden border-white/70 bg-white/85 shadow-none backdrop-blur">
+              <CardHeader className="flex flex-row items-start justify-between gap-4">
+                <div>
+                  <CardTitle>Equipo clínico</CardTitle>
+                  <p className="mt-1 text-sm text-muted-foreground">Cada ficha resume activación, especialidad y tratamientos asignados.</p>
                 </div>
-              ))}
-            </CardContent>
-          </Card>
+                <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-800">
+                  {barbers.length} perfiles
+                </span>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {barbers.map((barber) => {
+                  const assignedServices = (barber.barber_services || [])
+                    .map((item) => serviceNameById.get(item.service_id))
+                    .filter(Boolean) as string[];
+
+                  return (
+                    <div key={barber.id} className="rounded-[24px] border border-sky-100 bg-[linear-gradient(180deg,rgba(240,249,255,0.95)_0%,rgba(255,255,255,0.98)_100%)] p-4">
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="space-y-3">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-lg font-semibold">{barber.display_name}</p>
+                              <Tag tone={barber.is_active ? "emerald" : "slate"}>{barber.is_active ? "Activo" : "Inactivo"}</Tag>
+                              <Tag tone="sky">{barber.specialty || "Odontología general"}</Tag>
+                            </div>
+                            {barber.bio ? <p className="mt-1 text-sm text-muted-foreground">{barber.bio}</p> : null}
+                          </div>
+
+                          <div className="grid gap-2 sm:grid-cols-3">
+                            <MiniStat label="Servicios asignados" value={String(assignedServices.length)} />
+                            <MiniStat label="Reservas atendidas" value={String(analytics.topBarbers.find((item) => item.name === barber.display_name)?.count || 0)} />
+                            <MiniStat label="Ingresos" value={formatCurrency(analytics.topBarbers.find((item) => item.name === barber.display_name)?.revenue || 0)} />
+                          </div>
+
+                          {assignedServices.length ? (
+                            <div className="flex flex-wrap gap-2">
+                              {assignedServices.map((serviceName) => (
+                                <Tag key={`${barber.id}-${serviceName}`} tone="slate">
+                                  {serviceName}
+                                </Tag>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">Sin tratamientos asignados todavía.</p>
+                          )}
+                        </div>
+
+                        <div className="flex justify-end">
+                          <Button variant="outline" size="sm" onClick={() => toggleBarber(barber)}>
+                            {barber.is_active ? "Desactivar" : "Activar"}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          </div>
           <CreateBarberForm services={services.filter((service) => service.is_active)} onSubmit={createBarber} />
         </div>
       )}
@@ -932,6 +1108,28 @@ function HealthBar({ label, value, tone = "amber" }: { label: string; value: num
       <div className="h-3 rounded-full bg-sky-50">
         <div className={`h-3 rounded-full bg-gradient-to-r ${toneClass}`} style={{ width }} />
       </div>
+    </div>
+  );
+}
+
+function Tag({ children, tone = "slate" }: { children: string; tone?: "emerald" | "sky" | "slate" | "rose" }) {
+  const toneClass =
+    tone === "emerald"
+      ? "bg-emerald-100 text-emerald-700"
+      : tone === "sky"
+        ? "bg-sky-100 text-sky-800"
+        : tone === "rose"
+          ? "bg-rose-100 text-rose-700"
+          : "bg-slate-100 text-slate-700";
+
+  return <span className={`rounded-full px-3 py-1 text-xs font-semibold ${toneClass}`}>{children}</span>;
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white px-3 py-3">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-slate-900">{value}</p>
     </div>
   );
 }
