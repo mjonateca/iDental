@@ -35,6 +35,7 @@ export interface Shop {
   name: string;
   slug: string;
   logo_url: string | null;
+  banner_image_url?: string | null;
   address: string | null;
   lat: number | null;
   lng: number | null;
@@ -208,7 +209,7 @@ export interface NotificationEvent {
   booking_id: string | null;
   shop_id: string | null;
   client_id: string | null;
-  channel: "whatsapp";
+  channel: "whatsapp" | "email";
   type: NotificationType;
   status: NotificationStatus;
   scheduled_for: string | null;
@@ -222,7 +223,7 @@ export interface NotificationTemplate {
   id: string;
   shop_id: string | null;
   type: NotificationType;
-  channel: "whatsapp";
+  channel: "whatsapp" | "email";
   is_active: boolean;
   send_offset_minutes: number | null;
   body: string;

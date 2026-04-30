@@ -31,6 +31,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         services={[]}
         barbers={[]}
         clients={[]}
+        clientEmailById={{
+          "demo-client-1": "pedro@example.com",
+          "demo-client-2": "luis@example.com",
+          "demo-client-3": "miguel@example.com",
+          "demo-client-4": "roberto@example.com",
+        }}
+        ownerEmail="clinica@sonrisaclara.com"
         notificationEvents={[]}
         subscription={null}
         paymentMethods={[]}
@@ -130,14 +137,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     const [{ data: todayBookingsRaw }, { data: upcomingBookingsRaw }, { data: servicesRaw }] = await Promise.all([
       admin
         .from("bookings")
-        .select("*, clients(name, phone, whatsapp), shops(name, slug), services(name, price, currency), booking_addons(*)")
+        .select("*, clients(id, user_id, name, phone, whatsapp), shops(name, slug), services(name, price, currency), booking_addons(*)")
         .eq("barber_id", barber.id)
         .eq("date", today)
         .not("status", "in", '("cancelled","no_show")')
         .order("start_time"),
       admin
         .from("bookings")
-        .select("*, clients(name, phone, whatsapp), shops(name, slug), services(name, price, currency), booking_addons(*)")
+        .select("*, clients(id, user_id, name, phone, whatsapp), shops(name, slug), services(name, price, currency), booking_addons(*)")
         .eq("barber_id", barber.id)
         .gte("date", today)
         .lte("date", weekEnd)
@@ -183,14 +190,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     await Promise.all([
       admin
         .from("bookings")
-        .select("*, clients(name, phone, whatsapp), barbers(display_name), services(name, duration_min, price), booking_addons(*)")
+        .select("*, clients(id, user_id, name, phone, whatsapp), barbers(display_name), services(name, duration_min, price), booking_addons(*)")
         .eq("shop_id", shop.id)
         .eq("date", today)
         .not("status", "in", '("cancelled","no_show")')
         .order("start_time"),
       admin
         .from("bookings")
-        .select("*, clients(name, phone, whatsapp), barbers(display_name), services(name, duration_min, price), booking_addons(*)")
+        .select("*, clients(id, user_id, name, phone, whatsapp), barbers(display_name), services(name, duration_min, price), booking_addons(*)")
         .eq("shop_id", shop.id)
         .gte("date", today)
         .not("status", "in", '("cancelled","no_show")')
@@ -226,10 +233,20 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     admin.from("services").select("*, service_addons(*)").eq("shop_id", shop.id).order("sort_order").order("name"),
     admin.from("barbers").select("*, barber_services(service_id)").eq("shop_id", shop.id).order("display_name"),
     clientIds.length
-      ? admin.from("clients").select("id,name,phone,whatsapp,city,country_name").in("id", clientIds).limit(100)
+      ? admin.from("clients").select("id,user_id,name,phone,whatsapp,city,country_name").in("id", clientIds).limit(100)
       : Promise.resolve({ data: [] }),
     admin.from("notification_events").select("*").eq("shop_id", shop.id).order("created_at", { ascending: false }).limit(20),
   ]);
+
+  const clientUserIds = [...new Set(((clients || []) as Array<{ user_id?: string | null }>).map((client) => client.user_id).filter(Boolean))];
+  const { data: clientProfiles } = clientUserIds.length
+    ? await admin.from("profiles").select("user_id, email").in("user_id", clientUserIds as string[])
+    : { data: [] };
+
+  const emailByUserId = new Map((clientProfiles || []).map((profile) => [profile.user_id, profile.email || null]));
+  const clientEmailById = Object.fromEntries(
+    ((clients || []) as Array<{ id: string; user_id?: string | null }>).map((client) => [client.id, emailByUserId.get(client.user_id || "") || null])
+  );
 
   return (
     <DashboardClient
@@ -239,6 +256,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       services={(services || []) as never}
       barbers={(barbers || []) as never}
       clients={(clients || []) as never}
+      clientEmailById={clientEmailById}
+      ownerEmail={typedProfile?.email || null}
       notificationEvents={(notificationEvents || []) as never}
       subscription={subscriptionRaw as ShopSubscription | null}
       paymentMethods={(paymentMethodsRaw || []) as ShopPaymentMethod[]}

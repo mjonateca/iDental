@@ -8,6 +8,7 @@ export const demoShop: Shop = {
   name: "Sonrisa Clara Santiago",
   slug: "sonrisa-clara",
   logo_url: null,
+  banner_image_url: "https://images.unsplash.com/photo-1609840114035-3c981b782dfe?auto=format&fit=crop&w=1600&q=80",
   address: "Calle El Sol #45, Santiago, RD",
   lat: 19.4517,
   lng: -70.6970,

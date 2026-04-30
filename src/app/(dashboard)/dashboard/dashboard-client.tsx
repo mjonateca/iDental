@@ -3,6 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import type { InputHTMLAttributes } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import {
   CalendarDays,
@@ -11,8 +12,11 @@ import {
   CreditCard,
   ExternalLink,
   Loader2,
+  Mail,
+  Image as ImageIcon,
   ShieldCheck,
   TrendingUp,
+  UploadCloud,
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -51,7 +55,7 @@ export interface BookingWithRelations {
   guest_count?: number;
   notes?: string | null;
   booking_addons?: BookingAddon[];
-  clients: { name: string; phone: string | null; whatsapp: string | null } | null;
+  clients: { id?: string; user_id?: string | null; name: string; phone: string | null; whatsapp: string | null } | null;
   barbers: { display_name: string } | null;
   services: { name: string; duration_min: number; price: number } | null;
 }
@@ -60,6 +64,7 @@ type BarberWithServices = Barber & { barber_services?: Array<{ service_id: strin
 type ServiceWithAddons = Service & { service_addons?: ServiceAddon[] };
 type ClientSummary = {
   id: string;
+  user_id?: string | null;
   name: string;
   phone: string | null;
   whatsapp: string | null;
@@ -102,6 +107,8 @@ interface Props {
   services: ServiceWithAddons[];
   barbers: BarberWithServices[];
   clients: ClientSummary[];
+  clientEmailById: Record<string, string | null>;
+  ownerEmail?: string | null;
   notificationEvents: NotificationEvent[];
   subscription: ShopSubscription | null;
   paymentMethods: ShopPaymentMethod[];
@@ -202,6 +209,8 @@ export default function DashboardClient({
   services: initialServices,
   barbers: initialBarbers,
   clients,
+  clientEmailById,
+  ownerEmail,
   notificationEvents,
   subscription,
   paymentMethods,
@@ -217,9 +226,12 @@ export default function DashboardClient({
   const [barbers, setBarbers] = useState(initialBarbers);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [shopState, setShopState] = useState(shop);
+  const [notificationItems, setNotificationItems] = useState(notificationEvents);
   const [openingHours, setOpeningHours] = useState<OpeningHoursValue>(() => normalizeOpeningHours(shop.opening_hours));
   const [savingSchedule, setSavingSchedule] = useState(false);
   const [billingAction, setBillingAction] = useState<string | null>(null);
+  const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
 
   const clientItems = useMemo(
     () =>
@@ -265,6 +277,7 @@ export default function DashboardClient({
   const activeBarbers = barbers.filter((barber) => barber.is_active);
   const specialtiesCount = new Set(barbers.map((barber) => barber.specialty?.trim()).filter(Boolean)).size;
   const serviceNameById = new Map(services.map((service) => [service.id, service.name]));
+  const reminderCandidates = bookings.filter((booking) => ["pending", "confirmed", "rescheduled"].includes(booking.status));
 
   function updateDay(day: keyof OpeningHoursValue, field: "open" | "close" | "closed", value: string | boolean) {
     setOpeningHours((current) => ({
@@ -482,6 +495,62 @@ export default function DashboardClient({
     window.location.href = payload.url;
   }
 
+  async function sendBookingReminder(bookingId: string) {
+    setSendingReminderId(bookingId);
+    const response = await fetch("/api/dashboard/reminders/email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ booking_id: bookingId }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    setSendingReminderId(null);
+
+    if (!response.ok) {
+      toast({ variant: "destructive", title: "No se envió el recordatorio", description: payload.error || "Error inesperado" });
+      return;
+    }
+
+    setNotificationItems((current) => [
+      {
+        id: `local-${bookingId}-${Date.now()}`,
+        booking_id: bookingId,
+        shop_id: shopState.id,
+        client_id: bookings.find((booking) => booking.id === bookingId)?.client_id || null,
+        channel: "email",
+        type: "booking_reminder",
+        status: "sent",
+        scheduled_for: null,
+        sent_at: new Date().toISOString(),
+        error: null,
+        payload: {},
+        created_at: new Date().toISOString(),
+      },
+      ...current,
+    ]);
+    toast({ title: payload.message || "Recordatorio enviado" });
+  }
+
+  async function uploadBannerImage(file: File) {
+    setUploadingBanner(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch("/api/dashboard/shop/banner", {
+      method: "POST",
+      body: formData,
+    });
+    const payload = await response.json().catch(() => ({}));
+    setUploadingBanner(false);
+
+    if (!response.ok || !payload.shop) {
+      toast({ variant: "destructive", title: "No se subió el banner", description: payload.error || "Error inesperado" });
+      return;
+    }
+
+    setShopState(payload.shop);
+    toast({ title: "Banner actualizado" });
+  }
+
   return (
     <div className="max-w-7xl p-4 md:p-8">
       <div className="mb-7 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -513,15 +582,15 @@ export default function DashboardClient({
         <div className="space-y-6">
           <section className="grid gap-4 xl:grid-cols-[1.7fr_1fr]">
             <div className="overflow-hidden rounded-[28px] bg-[linear-gradient(135deg,#0f4667_0%,#2d8fd0_48%,#8fd7ff_100%)] p-6 text-white shadow-[0_24px_60px_rgba(29,113,173,0.22)]">
-              <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-                <div className="max-w-2xl">
+              <div className="space-y-8">
+                <div className="max-w-2xl pr-2">
                   <p className="text-sm font-medium text-white/70">Vista ejecutiva del dia</p>
                   <h2 className="mt-2 text-3xl font-bold tracking-tight">Operacion, ingresos y equipo en una sola pantalla.</h2>
                   <p className="mt-3 max-w-xl text-sm text-white/78">
                     Ve lo urgente primero: agenda de hoy, rendimiento del equipo, ticket promedio y salud de cobros sin perder el tono ligero de la app.
                   </p>
                 </div>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
                   <HeroMetric title="Hoy" value={todayBookings.length} detail="citas activas" />
                   <HeroMetric title="Facturacion" value={formatCurrency(todayRevenue)} detail="programada" />
                   <HeroMetric title="Ocupacion" value={`${occupancyRate}%`} detail="de la agenda" />
@@ -735,8 +804,8 @@ export default function DashboardClient({
                 ) : (
                   bookings.map((booking) => (
                     <div key={booking.id} className="rounded-[24px] border border-sky-100 bg-[linear-gradient(180deg,rgba(240,249,255,0.95)_0%,rgba(255,255,255,0.98)_100%)] p-4">
-                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                        <div className="space-y-3">
+                      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_160px]">
+                        <div className="min-w-0 space-y-3">
                           <div>
                             <div className="flex flex-wrap items-center gap-2">
                               <p className="text-lg font-semibold">{booking.clients?.name || "Cliente"}</p>
@@ -777,7 +846,7 @@ export default function DashboardClient({
                           ) : null}
                         </div>
 
-                        <div className="flex flex-wrap gap-2 lg:max-w-[220px] lg:justify-end">
+                        <div className="flex flex-col gap-2 xl:items-stretch">
                           {(["confirmed", "completed", "cancelled"] as BookingStatus[]).map((status) => (
                             <Button key={status} size="sm" variant="outline" disabled={updatingId === booking.id} onClick={() => updateBooking(booking.id, status)}>
                               {updatingId === booking.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : STATUS_LABELS[status]}
@@ -1023,31 +1092,122 @@ export default function DashboardClient({
       )}
 
       {currentTab === "whatsapp" && (
-        <SimpleList
-          title="WhatsApp / Notificaciones"
-          empty="No hay notificaciones en cola."
-          items={notificationEvents.map((event) => ({
-            title: event.type.replaceAll("_", " "),
-            detail: `${event.status}${event.scheduled_for ? ` · ${new Date(event.scheduled_for).toLocaleString()}` : ""}`,
-          }))}
-        />
+        <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+          <Card className="border-white/70 bg-white/85 shadow-none backdrop-blur">
+            <CardHeader>
+              <CardTitle>Recordatorios por email</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Envía manualmente un correo recordando la cita desde la operativa de la clínica.
+                {ownerEmail ? ` Responderá a ${ownerEmail}.` : ""}
+              </p>
+              {reminderCandidates.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No hay reservas pendientes para recordar.</p>
+              ) : (
+                reminderCandidates.map((booking) => {
+                  const email = booking.client_id ? clientEmailById[booking.client_id] : null;
+                  return (
+                    <div key={`reminder-${booking.id}`} className="rounded-2xl border border-sky-100 bg-sky-50/40 p-4">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="min-w-0">
+                          <p className="font-semibold">{booking.clients?.name || "Cliente"}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {booking.date} · {formatTime(booking.start_time.slice(0, 5))} · {booking.services?.name} · {booking.barbers?.display_name}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {email || "Este cliente no tiene correo registrado."}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          disabled={!email || sendingReminderId === booking.id}
+                          onClick={() => sendBookingReminder(booking.id)}
+                        >
+                          {sendingReminderId === booking.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
+                          Enviar reminder
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </CardContent>
+          </Card>
+
+          <SimpleList
+            title="Historial de notificaciones"
+            empty="Aún no hay recordatorios enviados."
+            items={notificationItems.map((event) => ({
+              title: `${event.channel.toUpperCase()} · ${event.type.replaceAll("_", " ")}`,
+              detail: `${event.status}${event.sent_at ? ` · ${new Date(event.sent_at).toLocaleString()}` : ""}${event.error ? ` · ${event.error}` : ""}`,
+            }))}
+          />
+        </div>
       )}
 
       {currentTab === "settings" && (
-        <Card className="shadow-none">
-          <CardHeader>
-            <CardTitle>Ajustes</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm text-muted-foreground">
-            <p>{shopState.name}</p>
-            <p>{shopState.address}</p>
-            <p>
-              {shopState.city} · {shopState.country_name}
-            </p>
-            <p>{shopState.description || "Sin descripción pública."}</p>
-            <p>Pagos online: {shopState.payments_enabled ? `Sí · modo ${shopState.online_payment_mode}` : "No activados"}</p>
-          </CardContent>
-        </Card>
+        <div className="grid gap-4 xl:grid-cols-[1fr_380px]">
+          <Card className="shadow-none">
+            <CardHeader>
+              <CardTitle>Ajustes</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm text-muted-foreground">
+              <p>{shopState.name}</p>
+              <p>{shopState.address}</p>
+              <p>
+                {shopState.city} · {shopState.country_name}
+              </p>
+              <p>{shopState.description || "Sin descripción pública."}</p>
+              <p>Pagos online: {shopState.payments_enabled ? `Sí · modo ${shopState.online_payment_mode}` : "No activados"}</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-white/70 bg-white/85 shadow-none backdrop-blur">
+            <CardHeader>
+              <CardTitle>Banner público</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="overflow-hidden rounded-2xl border border-sky-100 bg-sky-50">
+                {shopState.banner_image_url ? (
+                  <Image
+                    src={shopState.banner_image_url}
+                    alt="Banner de la clínica"
+                    width={1200}
+                    height={480}
+                    className="h-48 w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
+                    <ImageIcon className="mr-2 h-4 w-4" />
+                    Sin banner cargado
+                  </div>
+                )}
+              </div>
+
+              <label className="block">
+                <span className="mb-2 block text-sm text-muted-foreground">Sube la imagen principal del banner público.</span>
+                <Input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  disabled={uploadingBanner}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) {
+                      void uploadBannerImage(file);
+                      event.currentTarget.value = "";
+                    }
+                  }}
+                />
+              </label>
+
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <UploadCloud className="h-4 w-4" />
+                JPG, PNG o WEBP hasta 5 MB.
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       <Toaster />
@@ -1073,9 +1233,9 @@ function Metric({ title, value, icon: Icon }: { title: string; value: number | s
 
 function HeroMetric({ title, value, detail }: { title: string; value: string | number; detail: string }) {
   return (
-    <div className="rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur">
+    <div className="min-w-0 rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur">
       <p className="text-xs uppercase tracking-[0.18em] text-white/65">{title}</p>
-      <p className="mt-2 text-2xl font-bold">{value}</p>
+      <p className="mt-2 break-words text-2xl font-bold">{value}</p>
       <p className="mt-1 text-xs text-white/70">{detail}</p>
     </div>
   );
@@ -1127,9 +1287,9 @@ function Tag({ children, tone = "slate" }: { children: string; tone?: "emerald" 
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white px-3 py-3">
+    <div className="min-w-0 rounded-2xl border border-slate-200 bg-white px-3 py-3">
       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-slate-900">{value}</p>
+      <p className="mt-1 break-words text-sm font-semibold text-slate-900">{value}</p>
     </div>
   );
 }

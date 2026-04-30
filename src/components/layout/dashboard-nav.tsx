@@ -21,7 +21,7 @@ const shopNavItems: NavItem[] = [
   { tab: "barbers", label: "Dentistas", icon: UserRound },
   { tab: "clients", label: "Clientes", icon: Users },
   { tab: "schedule", label: "Horarios", icon: Calendar },
-  { tab: "whatsapp", label: "WhatsApp", icon: Bell },
+  { tab: "whatsapp", label: "Recordatorios", icon: Bell },
   { tab: "settings", label: "Ajustes", icon: Settings },
 ];
 
