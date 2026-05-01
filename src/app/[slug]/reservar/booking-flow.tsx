@@ -2,8 +2,6 @@
 
 import { useMemo, useState } from "react";
 import Image from "next/image";
-import Image from "next/image";
-import Image from "next/image";
 import Link from "next/link";
 import { addDays, format, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
