@@ -169,8 +169,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         upcomingBookings={(upcomingBookingsRaw || []) as never}
         expectedToday={expectedToday}
         initialTab={initialTab}
-        ratings={[]}
-        emailNotifications={[]}
       />
     );
   }
