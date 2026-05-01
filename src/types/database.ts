@@ -37,8 +37,6 @@ export interface Shop {
   logo_url: string | null;
   banner_image_url?: string | null;
   maps_url?: string | null;
-  maps_url?: string | null;
-  maps_url?: string | null;
   address: string | null;
   lat: number | null;
   lng: number | null;
