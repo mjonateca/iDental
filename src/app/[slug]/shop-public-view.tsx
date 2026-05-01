@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { MapPin, Phone, Star, Clock, Home } from "lucide-react";
+import { MapPin, Phone, Star, Clock, Home, ExternalLink } from "lucide-react";
 import LogoMark from "@/components/branding/logo-mark";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -119,18 +119,24 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
                       : "border-border hover:border-primary/40"
                   }`}
                 >
-                  <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center mb-3 overflow-hidden">
+                  <div className="relative w-20 h-20 rounded-xl bg-muted flex items-center justify-center mb-3 overflow-hidden">
                     {barber.avatar_url ? (
                       <Image
                         src={barber.avatar_url}
                         alt={barber.display_name}
-                        width={48}
-                        height={48}
+                        width={80}
+                        height={80}
                         className="object-cover w-full h-full"
                       />
                     ) : (
-                      <span className="text-xl font-bold text-muted-foreground">
+                      <span className="text-2xl font-bold text-muted-foreground">
                         {barber.display_name[0].toUpperCase()}
+                      </span>
+                    )}
+                    {barber.rating > 0 && (
+                      <span className="absolute bottom-1 right-1 flex items-center gap-0.5 rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-white leading-none">
+                        <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />
+                        {barber.rating.toFixed(1)}
                       </span>
                     )}
                   </div>
@@ -140,12 +146,7 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
                   {barber.specialty && (
                     <p className="mt-1 text-xs text-primary">{barber.specialty}</p>
                   )}
-                  {barber.rating > 0 && (
-                    <p className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                      <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                      {barber.rating.toFixed(1)}
-                    </p>
-                  )}
+
                 </button>
               ))}
             </div>
@@ -191,6 +192,21 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
             )}
           </div>
         </section>
+
+        {/* Mapa */}
+        {shop.maps_url && (
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-semibold">Ubicación</h2>
+              <a href={shop.maps_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm text-primary hover:underline">
+                <ExternalLink className="h-3.5 w-3.5" />Abrir en Google Maps
+              </a>
+            </div>
+            <div className="overflow-hidden rounded-xl border shadow-sm">
+              <iframe src={shop.maps_url} width="100%" height="300" style={{ border: 0 }} allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" title="Ubicación de la clínica dental" />
+            </div>
+          </section>
+        )}
 
         {/* CTA Reservar */}
         <div className="pb-8">

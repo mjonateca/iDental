@@ -6,7 +6,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import {
+  Bell,
   CalendarDays,
+  Camera,
   CheckCircle,
   Clock,
   CreditCard,
@@ -14,10 +16,15 @@ import {
   Loader2,
   Mail,
   Image as ImageIcon,
+  Send,
   ShieldCheck,
+  Star,
+  Trash2,
   TrendingUp,
   UploadCloud,
+  UserRound,
   Users,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,9 +34,11 @@ import { toast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { formatCurrency, formatTime } from "@/lib/utils";
 import type {
+  BarberRating,
   Barber,
   BookingAddon,
   BookingStatus,
+  EmailNotification,
   NotificationEvent,
   PaymentStatus,
   Service,
@@ -110,6 +119,8 @@ interface Props {
   clientEmailById: Record<string, string | null>;
   ownerEmail?: string | null;
   notificationEvents: NotificationEvent[];
+  ratings: BarberRating[];
+  emailNotifications: EmailNotification[];
   subscription: ShopSubscription | null;
   paymentMethods: ShopPaymentMethod[];
   analytics: Analytics;
@@ -118,7 +129,7 @@ interface Props {
   initialTab?: string;
 }
 
-type TabId = "summary" | "bookings" | "services" | "barbers" | "clients" | "schedule" | "whatsapp" | "settings";
+type TabId = "summary" | "bookings" | "services" | "barbers" | "clients" | "schedule" | "email" | "settings";
 
 const STATUS_LABELS: Record<BookingStatus, string> = {
   pending: "Pendiente",
@@ -128,6 +139,18 @@ const STATUS_LABELS: Record<BookingStatus, string> = {
   no_show: "No se presentó",
   cancelled: "Cancelada",
 };
+
+function StarDisplay({ rating, size = "sm" }: { rating: number; size?: "sm" | "md" }) {
+  const sz = size === "md" ? "h-5 w-5" : "h-3.5 w-3.5";
+  return (
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Star key={i} className={`${sz} ${i <= Math.round(rating) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
+      ))}
+    </div>
+  );
+}
+
 
 const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   pending: "Pendiente de pago",
@@ -212,6 +235,8 @@ export default function DashboardClient({
   clientEmailById,
   ownerEmail,
   notificationEvents,
+  ratings,
+  emailNotifications: initialEmailNotifications,
   subscription,
   paymentMethods,
   analytics,
@@ -232,6 +257,9 @@ export default function DashboardClient({
   const [billingAction, setBillingAction] = useState<string | null>(null);
   const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
   const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [deletingServiceId, setDeletingServiceId] = useState<string | null>(null);
+  const [uploadingBarberPhoto, setUploadingBarberPhoto] = useState<string | null>(null);
+  const [emailNotifications, setEmailNotifications] = useState(initialEmailNotifications);
 
   const clientItems = useMemo(
     () =>
@@ -549,6 +577,52 @@ export default function DashboardClient({
 
     setShopState(payload.shop);
     toast({ title: "Banner actualizado" });
+  }
+
+  async function deleteService(id: string) {
+    setDeletingServiceId(id);
+    const response = await fetch(`/api/dashboard/services/${id}`, { method: "DELETE" });
+    setDeletingServiceId(null);
+    if (!response.ok) { toast({ variant: "destructive", title: "No se eliminó el servicio" }); return; }
+    setServices((prev) => prev.filter((s) => s.id !== id));
+    toast({ title: "Servicio eliminado" });
+  }
+
+  async function uploadBarberPhoto(barberId: string, file: File) {
+    setUploadingBarberPhoto(barberId);
+    const fd = new FormData(); fd.append("file", file);
+    const response = await fetch(`/api/dashboard/barbers/${barberId}/upload-photo`, { method: "POST", body: fd });
+    const payload = await response.json().catch(() => ({}));
+    setUploadingBarberPhoto(null);
+    if (!response.ok) { toast({ variant: "destructive", title: "Error al subir foto", description: payload.error }); return; }
+    setBarbers((prev) => prev.map((b) => b.id === barberId ? { ...b, avatar_url: payload.url } : b));
+    toast({ title: "Foto actualizada" });
+  }
+
+  async function sendEmailNotification(bookingId: string, type: string) {
+    const response = await fetch("/api/dashboard/email-notifications", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ booking_id: bookingId, type }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) { toast({ variant: "destructive", title: "Error al enviar email", description: payload.error }); return; }
+    setEmailNotifications((prev) => [payload.notification, ...prev]);
+    toast({ title: "Email enviado" });
+  }
+
+  async function saveShopInfo(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const response = await fetch("/api/dashboard/shop", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address: form.get("address"), phone: form.get("phone"), description: form.get("description"), maps_url: form.get("maps_url") || null }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) { toast({ variant: "destructive", title: "No se guardó", description: payload.error }); return; }
+    setShopState(payload);
+    toast({ title: "Información guardada" });
   }
 
   return (
@@ -925,6 +999,15 @@ export default function DashboardClient({
                         <Button variant="outline" size="sm" onClick={() => toggleService(service)}>
                           {service.is_active ? "Desactivar" : "Activar"}
                         </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => { if (confirm("¿Eliminar este servicio?")) deleteService(service.id); }}
+                            disabled={deletingServiceId === service.id}
+                          >
+                            {deletingServiceId === service.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                          </Button>
                       </div>
 
                       <div className="grid gap-2 sm:grid-cols-3">
@@ -1029,7 +1112,25 @@ export default function DashboardClient({
                           )}
                         </div>
 
-                        <div className="flex justify-end">
+                        <div className="flex flex-col items-end gap-2">
+                          <div className="relative h-16 w-16 overflow-hidden rounded-xl bg-muted flex items-center justify-center">
+                            {barber.avatar_url ? (
+                              <Image src={barber.avatar_url} alt={barber.display_name} width={64} height={64} className="object-cover w-full h-full" />
+                            ) : (
+                              <UserRound className="h-8 w-8 text-muted-foreground" />
+                            )}
+                            {barber.rating > 0 && (
+                              <span className="absolute bottom-0.5 right-0.5 flex items-center gap-0.5 rounded bg-black/60 px-1 py-0.5 text-[9px] font-semibold text-white leading-none">
+                                <Star className="h-2 w-2 fill-amber-400 text-amber-400" />
+                                {barber.rating.toFixed(1)}
+                              </span>
+                            )}
+                          </div>
+                          <label className="cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors flex items-center gap-1.5">
+                            {uploadingBarberPhoto === barber.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Camera className="h-3 w-3" />}
+                            Foto
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadBarberPhoto(barber.id, f); }} />
+                          </label>
                           <Button variant="outline" size="sm" onClick={() => toggleBarber(barber)}>
                             {barber.is_active ? "Desactivar" : "Activar"}
                           </Button>
@@ -1091,7 +1192,7 @@ export default function DashboardClient({
         </Card>
       )}
 
-      {currentTab === "whatsapp" && (
+      {currentTab === "email" && (
         <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
           <Card className="border-white/70 bg-white/85 shadow-none backdrop-blur">
             <CardHeader>
@@ -1305,7 +1406,7 @@ function CreateServiceForm({ onSubmit }: { onSubmit: (event: FormEvent<HTMLFormE
         <CardTitle>Nuevo servicio</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={onSubmit} className="space-y-3">
+        <form onSubmit={saveShopInfo} className="space-y-3">
           <Field name="name" label="Nombre" required />
           <Field name="category" label="Categoría" />
           <Field name="duration_min" label="Duración minutos" type="number" defaultValue="30" required />
@@ -1314,6 +1415,11 @@ function CreateServiceForm({ onSubmit }: { onSubmit: (event: FormEvent<HTMLFormE
             <Label htmlFor="description">Descripción</Label>
             <textarea id="description" name="description" className="min-h-[76px] w-full rounded-xl border bg-background px-3 py-2 text-sm" />
           </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="maps_url" className="text-sm">Embed de Google Maps</Label>
+                    <Input id="maps_url" name="maps_url" defaultValue={shopState.maps_url || ""} placeholder="https://www.google.com/maps/embed?pb=..." />
+                    <p className="text-xs text-muted-foreground">Google Maps → tu local → Compartir → Insertar mapa → copia el <code>src</code> del iframe</p>
+                  </div>
           <Button type="submit" className="w-full">
             Crear servicio
           </Button>

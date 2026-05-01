@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { addDays, format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { Metadata } from "next";
-import type { Barber, Client, ClientPaymentMethod, Profile, Service, Shop, ShopPaymentMethod, ShopSubscription } from "@/types/database";
+import type { BarberRating, Barber, Client, ClientPaymentMethod, EmailNotification, Profile, Service, Shop, ShopPaymentMethod, ShopSubscription } from "@/types/database";
 import { ensureAccountRecords } from "@/lib/account-repair";
 import { IS_DEMO, demoBookings, demoShop } from "@/lib/demo-data";
 import { buildShopAnalytics } from "@/lib/shop-analytics";
@@ -229,13 +229,15 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   );
   const analytics = buildShopAnalytics(bookings as never);
 
-  const [{ data: services }, { data: barbers }, { data: clients }, { data: notificationEvents }] = await Promise.all([
+  const [{ data: services }, { data: barbers }, { data: clients }, { data: notificationEvents }, { data: ratingsRaw }, { data: emailNotificationsRaw }] = await Promise.all([
     admin.from("services").select("*, service_addons(*)").eq("shop_id", shop.id).order("sort_order").order("name"),
     admin.from("barbers").select("*, barber_services(service_id)").eq("shop_id", shop.id).order("display_name"),
     clientIds.length
       ? admin.from("clients").select("id,user_id,name,phone,whatsapp,city,country_name").in("id", clientIds).limit(100)
       : Promise.resolve({ data: [] }),
     admin.from("notification_events").select("*").eq("shop_id", shop.id).order("created_at", { ascending: false }).limit(20),
+    admin.from("reviews").select("*, barbers!inner(id, display_name, shop_id)").eq("barbers.shop_id", shop.id).order("created_at", { ascending: false }).limit(200),
+    admin.from("email_notifications").select("*").eq("shop_id", shop.id).order("created_at", { ascending: false }).limit(50),
   ]);
 
   const clientUserIds = [...new Set(((clients || []) as Array<{ user_id?: string | null }>).map((client) => client.user_id).filter(Boolean))];
@@ -259,6 +261,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       clientEmailById={clientEmailById}
       ownerEmail={typedProfile?.email || null}
       notificationEvents={(notificationEvents || []) as never}
+      ratings={(ratingsRaw || []) as BarberRating[]}
+      emailNotifications={(emailNotificationsRaw || []) as EmailNotification[]}
       subscription={subscriptionRaw as ShopSubscription | null}
       paymentMethods={(paymentMethodsRaw || []) as ShopPaymentMethod[]}
       analytics={analytics}

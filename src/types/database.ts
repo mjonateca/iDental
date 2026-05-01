@@ -36,6 +36,9 @@ export interface Shop {
   slug: string;
   logo_url: string | null;
   banner_image_url?: string | null;
+  maps_url?: string | null;
+  maps_url?: string | null;
+  maps_url?: string | null;
   address: string | null;
   lat: number | null;
   lng: number | null;
@@ -229,6 +232,81 @@ export interface NotificationTemplate {
   body: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface BarberRating {
+  id: string;
+  barber_id: string;
+  client_id: string;
+  booking_id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+  barbers?: { id: string; display_name: string; shop_id: string } | null;
+}
+
+export interface EmailNotification {
+  id: string;
+  shop_id: string;
+  booking_id: string | null;
+  client_id: string | null;
+  type: string;
+  status: string;
+  recipient_email: string | null;
+  recipient_name: string | null;
+  sent_at: string | null;
+  error_message: string | null;
+  created_at: string;
+}
+
+export interface BarberRating {
+  id: string;
+  barber_id: string;
+  client_id: string;
+  booking_id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+  barbers?: { id: string; display_name: string; shop_id: string } | null;
+}
+
+export interface EmailNotification {
+  id: string;
+  shop_id: string;
+  booking_id: string | null;
+  client_id: string | null;
+  type: string;
+  status: string;
+  recipient_email: string | null;
+  recipient_name: string | null;
+  sent_at: string | null;
+  error_message: string | null;
+  created_at: string;
+}
+
+export interface BarberRating {
+  id: string;
+  barber_id: string;
+  client_id: string;
+  booking_id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+  barbers?: { id: string; display_name: string; shop_id: string } | null;
+}
+
+export interface EmailNotification {
+  id: string;
+  shop_id: string;
+  booking_id: string | null;
+  client_id: string | null;
+  type: string;
+  status: string;
+  recipient_email: string | null;
+  recipient_name: string | null;
+  sent_at: string | null;
+  error_message: string | null;
+  created_at: string;
 }
 
 export interface Review {
