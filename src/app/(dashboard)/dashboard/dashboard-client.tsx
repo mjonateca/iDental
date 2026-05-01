@@ -136,7 +136,7 @@ const STATUS_LABELS: Record<BookingStatus, string> = {
   confirmed: "Confirmada",
   rescheduled: "Reprogramada",
   completed: "Completada",
-  no_show: "No se presentó",
+  no_show: "No se presentÃ³",
   cancelled: "Cancelada",
 };
 
@@ -170,10 +170,10 @@ const SUBSCRIPTION_LABELS: Record<SubscriptionStatus, string> = {
 const WEEK_DAYS = [
   { key: "lunes", label: "Lunes" },
   { key: "martes", label: "Martes" },
-  { key: "miercoles", label: "Miércoles" },
+  { key: "miercoles", label: "MiÃ©rcoles" },
   { key: "jueves", label: "Jueves" },
   { key: "viernes", label: "Viernes" },
-  { key: "sabado", label: "Sábado" },
+  { key: "sabado", label: "SÃ¡bado" },
   { key: "domingo", label: "Domingo" },
 ] as const;
 
@@ -265,7 +265,7 @@ export default function DashboardClient({
     () =>
       clients.map((client) => ({
         title: client.name,
-        detail: `${client.phone || client.whatsapp || "Sin teléfono"}${client.city ? ` · ${client.city}` : ""}`,
+        detail: `${client.phone || client.whatsapp || "Sin telÃ©fono"}${client.city ? ` Â· ${client.city}` : ""}`,
       })),
     [clients]
   );
@@ -327,7 +327,7 @@ export default function DashboardClient({
 
     const payload = await response.json().catch(() => ({ error: "Error inesperado" }));
     if (!response.ok) {
-      toast({ variant: "destructive", title: "No se actualizó la reserva", description: payload.error });
+      toast({ variant: "destructive", title: "No se actualizÃ³ la reserva", description: payload.error });
     } else {
       setBookings((prev) => prev.map((booking) => (booking.id === bookingId ? { ...booking, status } : booking)));
       toast({ title: payload.message || "Reserva actualizada", description: STATUS_LABELS[status] });
@@ -353,7 +353,7 @@ export default function DashboardClient({
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
-      toast({ variant: "destructive", title: "No se creó el servicio", description: payload.error });
+      toast({ variant: "destructive", title: "No se creÃ³ el servicio", description: payload.error });
       return;
     }
     setServices((prev) => [...prev, payload]);
@@ -369,7 +369,7 @@ export default function DashboardClient({
     });
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}));
-      toast({ variant: "destructive", title: "No se actualizó el servicio", description: payload.error });
+      toast({ variant: "destructive", title: "No se actualizÃ³ el servicio", description: payload.error });
       return;
     }
     setServices((prev) =>
@@ -396,7 +396,7 @@ export default function DashboardClient({
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
-      toast({ variant: "destructive", title: "No se creó el dentista", description: payload.error });
+      toast({ variant: "destructive", title: "No se creÃ³ el dentista", description: payload.error });
       return;
     }
     setBarbers((prev) => [...prev, { ...payload, barber_services: serviceIds.map((id) => ({ service_id: id })) }]);
@@ -412,7 +412,7 @@ export default function DashboardClient({
     });
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}));
-      toast({ variant: "destructive", title: "No se actualizó el dentista", description: payload.error });
+      toast({ variant: "destructive", title: "No se actualizÃ³ el dentista", description: payload.error });
       return;
     }
     setBarbers((prev) => prev.map((item) => (item.id === barber.id ? { ...item, is_active: !item.is_active } : item)));
@@ -432,7 +432,7 @@ export default function DashboardClient({
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
-      toast({ variant: "destructive", title: "No se creó el add-on", description: payload.error });
+      toast({ variant: "destructive", title: "No se creÃ³ el add-on", description: payload.error });
       return;
     }
     setServices((prev) =>
@@ -450,7 +450,7 @@ export default function DashboardClient({
     const response = await fetch(`/api/dashboard/service-addons/${addonId}`, { method: "DELETE" });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
-      toast({ variant: "destructive", title: "No se eliminó el add-on", description: payload.error });
+      toast({ variant: "destructive", title: "No se eliminÃ³ el add-on", description: payload.error });
       return;
     }
     setServices((prev) =>
@@ -474,7 +474,7 @@ export default function DashboardClient({
     if (invalidDay) {
       toast({
         variant: "destructive",
-        title: "Horario inválido",
+        title: "Horario invÃ¡lido",
         description: `Revisa ${invalidDay.label}: la hora de apertura debe ser menor que la de cierre.`,
       });
       setSavingSchedule(false);
@@ -491,7 +491,7 @@ export default function DashboardClient({
     setSavingSchedule(false);
 
     if (!response.ok) {
-      toast({ variant: "destructive", title: "No se guardó el horario", description: payload.error || "Error inesperado" });
+      toast({ variant: "destructive", title: "No se guardÃ³ el horario", description: payload.error || "Error inesperado" });
       return;
     }
 
@@ -505,7 +505,7 @@ export default function DashboardClient({
     const payload = await response.json().catch(() => ({}));
     setBillingAction(null);
     if (!response.ok || !payload.url) {
-      toast({ variant: "destructive", title: "No se pudo iniciar la suscripción", description: payload.error || "Error inesperado" });
+      toast({ variant: "destructive", title: "No se pudo iniciar la suscripciÃ³n", description: payload.error || "Error inesperado" });
       return;
     }
     window.location.href = payload.url;
@@ -534,7 +534,7 @@ export default function DashboardClient({
     setSendingReminderId(null);
 
     if (!response.ok) {
-      toast({ variant: "destructive", title: "No se envió el recordatorio", description: payload.error || "Error inesperado" });
+      toast({ variant: "destructive", title: "No se enviÃ³ el recordatorio", description: payload.error || "Error inesperado" });
       return;
     }
 
@@ -571,7 +571,7 @@ export default function DashboardClient({
     setUploadingBanner(false);
 
     if (!response.ok || !payload.shop) {
-      toast({ variant: "destructive", title: "No se subió el banner", description: payload.error || "Error inesperado" });
+      toast({ variant: "destructive", title: "No se subiÃ³ el banner", description: payload.error || "Error inesperado" });
       return;
     }
 
@@ -583,7 +583,7 @@ export default function DashboardClient({
     setDeletingServiceId(id);
     const response = await fetch(`/api/dashboard/services/${id}`, { method: "DELETE" });
     setDeletingServiceId(null);
-    if (!response.ok) { toast({ variant: "destructive", title: "No se eliminó el servicio" }); return; }
+    if (!response.ok) { toast({ variant: "destructive", title: "No se eliminÃ³ el servicio" }); return; }
     setServices((prev) => prev.filter((s) => s.id !== id));
     toast({ title: "Servicio eliminado" });
   }
@@ -620,9 +620,9 @@ export default function DashboardClient({
       body: JSON.stringify({ address: form.get("address"), phone: form.get("phone"), description: form.get("description"), maps_url: form.get("maps_url") || null }),
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) { toast({ variant: "destructive", title: "No se guardó", description: payload.error }); return; }
+    if (!response.ok) { toast({ variant: "destructive", title: "No se guardÃ³", description: payload.error }); return; }
     setShopState(payload);
-    toast({ title: "Información guardada" });
+    toast({ title: "InformaciÃ³n guardada" });
   }
 
   return (
@@ -632,13 +632,13 @@ export default function DashboardClient({
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">Panel Clinico</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight">{shopState.name}</h1>
           <p className="mt-1 text-muted-foreground capitalize">
-            {shopState.city ? `${shopState.city} · ` : ""}
+            {shopState.city ? `${shopState.city} Â· ` : ""}
             {todayStr}
           </p>
           {subscription && (
             <p className={`mt-2 text-sm font-medium ${subscriptionTone(subscription.status)}`}>
-              Suscripción: {SUBSCRIPTION_LABELS[subscription.status]}
-              {subscription.trial_ends_at ? ` · Trial hasta ${new Date(subscription.trial_ends_at).toLocaleDateString()}` : ""}
+              SuscripciÃ³n: {SUBSCRIPTION_LABELS[subscription.status]}
+              {subscription.trial_ends_at ? ` Â· Trial hasta ${new Date(subscription.trial_ends_at).toLocaleDateString()}` : ""}
             </p>
           )}
         </div>
@@ -647,7 +647,7 @@ export default function DashboardClient({
             <Link href="/">Inicio</Link>
           </Button>
           <Link href={`/${shopState.slug}`} target="_blank" className="text-sm font-medium text-primary hover:underline">
-            Ver página pública <ExternalLink className="inline h-3.5 w-3.5" />
+            Ver pÃ¡gina pÃºblica <ExternalLink className="inline h-3.5 w-3.5" />
           </Link>
         </div>
       </div>
@@ -682,17 +682,17 @@ export default function DashboardClient({
                   label="Proxima cita"
                   value={
                     nextBooking
-                      ? `${nextBooking.clients?.name || "Cliente"} · ${nextBooking.date} · ${formatTime(nextBooking.start_time.slice(0, 5))}`
+                      ? `${nextBooking.clients?.name || "Cliente"} Â· ${nextBooking.date} Â· ${formatTime(nextBooking.start_time.slice(0, 5))}`
                       : "Sin reservas pendientes"
                   }
                 />
                 <RadarRow
                   label="Dentista mas solicitado"
-                  value={topDentist ? `${topDentist.name} · ${topDentist.count} reservas` : "Todavia sin datos"}
+                  value={topDentist ? `${topDentist.name} Â· ${topDentist.count} reservas` : "Todavia sin datos"}
                 />
                 <RadarRow
                   label="Servicio dominante"
-                  value={topService ? `${topService.name} · ${formatCurrency(topService.revenue)}` : "Todavia sin datos"}
+                  value={topService ? `${topService.name} Â· ${formatCurrency(topService.revenue)}` : "Todavia sin datos"}
                 />
                 <RadarRow
                   label="Clientes recurrentes"
@@ -727,7 +727,7 @@ export default function DashboardClient({
                       <div>
                         <p className="font-medium">{booking.clients?.name || "Cliente"}</p>
                         <p className="text-sm text-muted-foreground">
-                          {formatTime(booking.start_time.slice(0, 5))} · {booking.services?.name} · {booking.barbers?.display_name}
+                          {formatTime(booking.start_time.slice(0, 5))} Â· {booking.services?.name} Â· {booking.barbers?.display_name}
                         </p>
                         {booking.booking_addons?.length ? (
                           <p className="text-xs text-muted-foreground">Add-ons: {booking.booking_addons.map((addon) => addon.name_snapshot).join(", ")}</p>
@@ -760,42 +760,42 @@ export default function DashboardClient({
 
           <div className="grid gap-4 lg:grid-cols-2">
             <InsightList
-              title="Servicios más solicitados"
+              title="Servicios mÃ¡s solicitados"
               items={analytics.topServices.map((item) => ({
                 title: item.name,
-                detail: `${item.count} reservas · ${formatCurrency(item.revenue)}`,
+                detail: `${item.count} reservas Â· ${formatCurrency(item.revenue)}`,
               }))}
             />
             <InsightList
-              title="Dentistas con más reservas"
+              title="Dentistas con mÃ¡s reservas"
               items={analytics.topBarbers.map((item) => ({
                 title: item.name,
-                detail: `${item.count} reservas · ${formatCurrency(item.revenue)}`,
+                detail: `${item.count} reservas Â· ${formatCurrency(item.revenue)}`,
               }))}
             />
             <InsightList
               title="Dentistas con mejor rendimiento"
               items={analytics.bestBarbers.map((item) => ({
                 title: item.name,
-                detail: `${Math.round(item.completionRate * 100)}% completadas · ${formatCurrency(item.revenue)}`,
+                detail: `${Math.round(item.completionRate * 100)}% completadas Â· ${formatCurrency(item.revenue)}`,
               }))}
             />
             <InsightList
-              title="Franja horaria con más demanda"
+              title="Franja horaria con mÃ¡s demanda"
               items={analytics.peakHours.map((item) => ({
                 title: item.slot,
                 detail: `${item.count} reservas`,
               }))}
             />
             <InsightList
-              title="Días con más demanda"
+              title="DÃ­as con mÃ¡s demanda"
               items={analytics.peakWeekdays.map((item) => ({
                 title: item.day,
                 detail: `${item.count} reservas`,
               }))}
             />
             <InsightList
-              title="Evolución mensual"
+              title="EvoluciÃ³n mensual"
               items={analytics.evolutions.month.slice(-6).map((item) => ({
                 title: item.label,
                 detail: `${item.value} reservas`,
@@ -805,7 +805,7 @@ export default function DashboardClient({
 
           <Card className="border-white/70 bg-white/85 shadow-none backdrop-blur">
             <CardHeader>
-              <CardTitle>Suscripción y cobros</CardTitle>
+              <CardTitle>SuscripciÃ³n y cobros</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {subscription ? (
@@ -816,7 +816,7 @@ export default function DashboardClient({
                       Importe: {formatCurrency(subscription.monthly_price, subscription.currency)} / mes
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Próxima renovación: {subscription.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString() : "Pendiente"}
+                      PrÃ³xima renovaciÃ³n: {subscription.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString() : "Pendiente"}
                     </p>
                     {subscription.last_payment_error && (
                       <p className="mt-2 text-sm text-destructive">{subscription.last_payment_error}</p>
@@ -827,25 +827,25 @@ export default function DashboardClient({
                       {billingAction === "checkout" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Activar / renovar plan"}
                     </Button>
                     <Button variant="outline" onClick={openBillingPortal}>
-                      {billingAction === "portal" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Gestionar método de pago"}
+                      {billingAction === "portal" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Gestionar mÃ©todo de pago"}
                     </Button>
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm font-medium">Tarjetas registradas</p>
                     {paymentMethods.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Todavía no hay métodos de pago guardados para la clínica dental.</p>
+                      <p className="text-sm text-muted-foreground">TodavÃ­a no hay mÃ©todos de pago guardados para la clÃ­nica dental.</p>
                     ) : (
                       paymentMethods.map((paymentMethod) => (
                         <div key={paymentMethod.id} className="rounded-lg border p-3 text-sm">
                           {paymentMethod.brand?.toUpperCase() || "Tarjeta"} terminada en {paymentMethod.last4 || "****"}
-                          {paymentMethod.is_default ? " · Predeterminada" : ""}
+                          {paymentMethod.is_default ? " Â· Predeterminada" : ""}
                         </div>
                       ))
                     )}
                   </div>
                 </>
               ) : (
-                <p className="text-sm text-muted-foreground">La suscripción de esta clínica dental todavía se está preparando.</p>
+                <p className="text-sm text-muted-foreground">La suscripciÃ³n de esta clÃ­nica dental todavÃ­a se estÃ¡ preparando.</p>
               )}
             </CardContent>
           </Card>
@@ -858,7 +858,7 @@ export default function DashboardClient({
             <Metric title="Por atender" value={upcomingBookings.length} icon={CalendarDays} />
             <Metric title="Pendientes" value={pendingBookings.length} icon={Clock} />
             <Metric title="Pagadas" value={paidBookings.length} icon={ShieldCheck} />
-            <Metric title="Con notas clínicas" value={bookingsWithNotes.length} icon={Users} />
+            <Metric title="Con notas clÃ­nicas" value={bookingsWithNotes.length} icon={Users} />
           </section>
 
           <div className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
@@ -866,7 +866,7 @@ export default function DashboardClient({
               <CardHeader className="flex flex-row items-start justify-between gap-4">
                 <div>
                   <CardTitle>Agenda operativa</CardTitle>
-                  <p className="mt-1 text-sm text-muted-foreground">Reserva, estado clínico y cobro en una sola vista.</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Reserva, estado clÃ­nico y cobro en una sola vista.</p>
                 </div>
                 <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-800">
                   {bookings.length} reservas
@@ -874,7 +874,7 @@ export default function DashboardClient({
               </CardHeader>
               <CardContent className="space-y-3">
                 {bookings.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No hay reservas próximas.</p>
+                  <p className="text-sm text-muted-foreground">No hay reservas prÃ³ximas.</p>
                 ) : (
                   bookings.map((booking) => (
                     <div key={booking.id} className="rounded-[24px] border border-sky-100 bg-[linear-gradient(180deg,rgba(240,249,255,0.95)_0%,rgba(255,255,255,0.98)_100%)] p-4">
@@ -889,7 +889,7 @@ export default function DashboardClient({
                               </Tag>
                             </div>
                             <p className="mt-1 text-sm text-muted-foreground">
-                              {booking.date} · {formatTime(booking.start_time.slice(0, 5))} a {formatTime(booking.end_time.slice(0, 5))}
+                              {booking.date} Â· {formatTime(booking.start_time.slice(0, 5))} a {formatTime(booking.end_time.slice(0, 5))}
                             </p>
                           </div>
 
@@ -936,24 +936,24 @@ export default function DashboardClient({
 
             <Card className="border-white/70 bg-white/85 shadow-none backdrop-blur">
               <CardHeader>
-                <CardTitle>Lectura rápida</CardTitle>
+                <CardTitle>Lectura rÃ¡pida</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <RadarRow
-                  label="Próxima cita"
+                  label="PrÃ³xima cita"
                   value={
                     nextBooking
-                      ? `${nextBooking.clients?.name || "Cliente"} · ${formatTime(nextBooking.start_time.slice(0, 5))}`
+                      ? `${nextBooking.clients?.name || "Cliente"} Â· ${formatTime(nextBooking.start_time.slice(0, 5))}`
                       : "No hay movimientos pendientes"
                   }
                 />
                 <RadarRow
                   label="Cobro confirmado"
-                  value={`${paidBookings.length} de ${bookings.length || 0} reservas ya están pagadas`}
+                  value={`${paidBookings.length} de ${bookings.length || 0} reservas ya estÃ¡n pagadas`}
                 />
                 <RadarRow
-                  label="Pendiente de decisión"
-                  value={`${pendingBookings.length} reservas requieren confirmación o cancelación`}
+                  label="Pendiente de decisiÃ³n"
+                  value={`${pendingBookings.length} reservas requieren confirmaciÃ³n o cancelaciÃ³n`}
                 />
               </CardContent>
             </Card>
@@ -968,13 +968,13 @@ export default function DashboardClient({
               <Metric title="Servicios activos" value={activeServices.length} icon={CheckCircle} />
               <Metric title="Add-ons activos" value={addonsCount} icon={TrendingUp} />
               <Metric title="Precio medio" value={formatCurrency(avgServicePrice)} icon={CreditCard} />
-              <Metric title="Duración media" value={`${avgServiceDuration} min`} icon={Clock} />
+              <Metric title="DuraciÃ³n media" value={`${avgServiceDuration} min`} icon={Clock} />
             </section>
 
             <Card className="overflow-hidden border-white/70 bg-white/85 shadow-none backdrop-blur">
               <CardHeader className="flex flex-row items-start justify-between gap-4">
                 <div>
-                  <CardTitle>Catálogo clínico</CardTitle>
+                  <CardTitle>CatÃ¡logo clÃ­nico</CardTitle>
                   <p className="mt-1 text-sm text-muted-foreground">Controla visibilidad, estructura de precio y add-ons por tratamiento.</p>
                 </div>
                 <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-800">
@@ -993,7 +993,7 @@ export default function DashboardClient({
                             <Tag tone="sky">{service.category || "General"}</Tag>
                           </div>
                           <p className="mt-1 text-sm text-muted-foreground">
-                            {service.description || "Sin descripción pública todavía."}
+                            {service.description || "Sin descripciÃ³n pÃºblica todavÃ­a."}
                           </p>
                         </div>
                         <Button variant="outline" size="sm" onClick={() => toggleService(service)}>
@@ -1003,7 +1003,7 @@ export default function DashboardClient({
                             variant="ghost"
                             size="sm"
                             className="text-destructive hover:text-destructive"
-                            onClick={() => { if (confirm("¿Eliminar este servicio?")) deleteService(service.id); }}
+                            onClick={() => { if (confirm("Â¿Eliminar este servicio?")) deleteService(service.id); }}
                             disabled={deletingServiceId === service.id}
                           >
                             {deletingServiceId === service.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
@@ -1011,7 +1011,7 @@ export default function DashboardClient({
                       </div>
 
                       <div className="grid gap-2 sm:grid-cols-3">
-                        <MiniStat label="Duración" value={`${service.duration_min} min`} />
+                        <MiniStat label="DuraciÃ³n" value={`${service.duration_min} min`} />
                         <MiniStat label="Precio base" value={formatCurrency(service.price, service.currency)} />
                         <MiniStat label="Add-ons" value={String(service.service_addons?.length || 0)} />
                       </div>
@@ -1025,7 +1025,7 @@ export default function DashboardClient({
                                 <div>
                                   <p className="font-medium">{addon.name}</p>
                                   <p className="text-muted-foreground">
-                                    +{addon.duration_min} min · {formatCurrency(addon.price, service.currency)}
+                                    +{addon.duration_min} min Â· {formatCurrency(addon.price, service.currency)}
                                   </p>
                                 </div>
                                 <Button variant="ghost" size="sm" onClick={() => deleteAddon(service.id, addon.id)}>
@@ -1035,7 +1035,7 @@ export default function DashboardClient({
                             ))}
                           </div>
                         ) : (
-                          <p className="text-sm text-muted-foreground">Todavía no hay add-ons para este servicio.</p>
+                          <p className="text-sm text-muted-foreground">TodavÃ­a no hay add-ons para este servicio.</p>
                         )}
                         <form onSubmit={(event) => createAddon(service.id, event)} className="grid gap-2 sm:grid-cols-[1fr_110px_110px_auto]">
                           <Input name="name" placeholder="Add-on" required />
@@ -1067,8 +1067,8 @@ export default function DashboardClient({
             <Card className="overflow-hidden border-white/70 bg-white/85 shadow-none backdrop-blur">
               <CardHeader className="flex flex-row items-start justify-between gap-4">
                 <div>
-                  <CardTitle>Equipo clínico</CardTitle>
-                  <p className="mt-1 text-sm text-muted-foreground">Cada ficha resume activación, especialidad y tratamientos asignados.</p>
+                  <CardTitle>Equipo clÃ­nico</CardTitle>
+                  <p className="mt-1 text-sm text-muted-foreground">Cada ficha resume activaciÃ³n, especialidad y tratamientos asignados.</p>
                 </div>
                 <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-800">
                   {barbers.length} perfiles
@@ -1088,7 +1088,7 @@ export default function DashboardClient({
                             <div className="flex flex-wrap items-center gap-2">
                               <p className="text-lg font-semibold">{barber.display_name}</p>
                               <Tag tone={barber.is_active ? "emerald" : "slate"}>{barber.is_active ? "Activo" : "Inactivo"}</Tag>
-                              <Tag tone="sky">{barber.specialty || "Odontología general"}</Tag>
+                              <Tag tone="sky">{barber.specialty || "OdontologÃ­a general"}</Tag>
                             </div>
                             {barber.bio ? <p className="mt-1 text-sm text-muted-foreground">{barber.bio}</p> : null}
                           </div>
@@ -1108,7 +1108,7 @@ export default function DashboardClient({
                               ))}
                             </div>
                           ) : (
-                            <p className="text-sm text-muted-foreground">Sin tratamientos asignados todavía.</p>
+                            <p className="text-sm text-muted-foreground">Sin tratamientos asignados todavÃ­a.</p>
                           )}
                         </div>
 
@@ -1146,7 +1146,7 @@ export default function DashboardClient({
         </div>
       )}
 
-      {currentTab === "clients" && <SimpleList title="Clientes" empty="Aún no hay clientes con reservas." items={clientItems} />}
+      {currentTab === "clients" && <SimpleList title="Clientes" empty="AÃºn no hay clientes con reservas." items={clientItems} />}
 
       {currentTab === "schedule" && (
         <Card className="shadow-none">
@@ -1200,8 +1200,8 @@ export default function DashboardClient({
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Envía manualmente un correo recordando la cita desde la operativa de la clínica.
-                {ownerEmail ? ` Responderá a ${ownerEmail}.` : ""}
+                EnvÃ­a manualmente un correo recordando la cita desde la operativa de la clÃ­nica.
+                {ownerEmail ? ` ResponderÃ¡ a ${ownerEmail}.` : ""}
               </p>
               {reminderCandidates.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No hay reservas pendientes para recordar.</p>
@@ -1214,7 +1214,7 @@ export default function DashboardClient({
                         <div className="min-w-0">
                           <p className="font-semibold">{booking.clients?.name || "Cliente"}</p>
                           <p className="text-sm text-muted-foreground">
-                            {booking.date} · {formatTime(booking.start_time.slice(0, 5))} · {booking.services?.name} · {booking.barbers?.display_name}
+                            {booking.date} Â· {formatTime(booking.start_time.slice(0, 5))} Â· {booking.services?.name} Â· {booking.barbers?.display_name}
                           </p>
                           <p className="mt-1 text-xs text-muted-foreground">
                             {email || "Este cliente no tiene correo registrado."}
@@ -1238,10 +1238,10 @@ export default function DashboardClient({
 
           <SimpleList
             title="Historial de notificaciones"
-            empty="Aún no hay recordatorios enviados."
+            empty="AÃºn no hay recordatorios enviados."
             items={notificationItems.map((event) => ({
-              title: `${event.channel.toUpperCase()} · ${event.type.replaceAll("_", " ")}`,
-              detail: `${event.status}${event.sent_at ? ` · ${new Date(event.sent_at).toLocaleString()}` : ""}${event.error ? ` · ${event.error}` : ""}`,
+              title: `${event.channel.toUpperCase()} Â· ${event.type.replaceAll("_", " ")}`,
+              detail: `${event.status}${event.sent_at ? ` Â· ${new Date(event.sent_at).toLocaleString()}` : ""}${event.error ? ` Â· ${event.error}` : ""}`,
             }))}
           />
         </div>
@@ -1257,23 +1257,23 @@ export default function DashboardClient({
               <p>{shopState.name}</p>
               <p>{shopState.address}</p>
               <p>
-                {shopState.city} · {shopState.country_name}
+                {shopState.city} Â· {shopState.country_name}
               </p>
-              <p>{shopState.description || "Sin descripción pública."}</p>
-              <p>Pagos online: {shopState.payments_enabled ? `Sí · modo ${shopState.online_payment_mode}` : "No activados"}</p>
+              <p>{shopState.description || "Sin descripciÃ³n pÃºblica."}</p>
+              <p>Pagos online: {shopState.payments_enabled ? `SÃ­ Â· modo ${shopState.online_payment_mode}` : "No activados"}</p>
             </CardContent>
           </Card>
 
           <Card className="border-white/70 bg-white/85 shadow-none backdrop-blur">
             <CardHeader>
-              <CardTitle>Banner público</CardTitle>
+              <CardTitle>Banner pÃºblico</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="overflow-hidden rounded-2xl border border-sky-100 bg-sky-50">
                 {shopState.banner_image_url ? (
                   <Image
                     src={shopState.banner_image_url}
-                    alt="Banner de la clínica"
+                    alt="Banner de la clÃ­nica"
                     width={1200}
                     height={480}
                     className="h-48 w-full object-cover"
@@ -1287,7 +1287,7 @@ export default function DashboardClient({
               </div>
 
               <label className="block">
-                <span className="mb-2 block text-sm text-muted-foreground">Sube la imagen principal del banner público.</span>
+                <span className="mb-2 block text-sm text-muted-foreground">Sube la imagen principal del banner pÃºblico.</span>
                 <Input
                   type="file"
                   accept="image/png,image/jpeg,image/webp"
@@ -1396,7 +1396,7 @@ function MiniStat({ label, value }: { label: string; value: string }) {
 }
 
 function InsightList({ title, items }: { title: string; items: Array<{ title: string; detail: string }> }) {
-  return <SimpleList title={title} empty="No hay datos suficientes todavía." items={items} />;
+  return <SimpleList title={title} empty="No hay datos suficientes todavÃ­a." items={items} />;
 }
 
 function CreateServiceForm({ onSubmit }: { onSubmit: (event: FormEvent<HTMLFormElement>) => void }) {
@@ -1406,19 +1406,19 @@ function CreateServiceForm({ onSubmit }: { onSubmit: (event: FormEvent<HTMLFormE
         <CardTitle>Nuevo servicio</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={saveShopInfo} className="space-y-3">
+        <form onSubmit={onSubmit} className="space-y-3">
           <Field name="name" label="Nombre" required />
-          <Field name="category" label="Categoría" />
-          <Field name="duration_min" label="Duración minutos" type="number" defaultValue="30" required />
+          <Field name="category" label="CategorÃ­a" />
+          <Field name="duration_min" label="DuraciÃ³n minutos" type="number" defaultValue="30" required />
           <Field name="price" label="Precio" type="number" defaultValue="500" required />
           <div className="space-y-1">
-            <Label htmlFor="description">Descripción</Label>
+            <Label htmlFor="description">DescripciÃ³n</Label>
             <textarea id="description" name="description" className="min-h-[76px] w-full rounded-xl border bg-background px-3 py-2 text-sm" />
           </div>
                   <div className="space-y-1">
                     <Label htmlFor="maps_url" className="text-sm">Embed de Google Maps</Label>
                     <Input id="maps_url" name="maps_url" defaultValue={shopState.maps_url || ""} placeholder="https://www.google.com/maps/embed?pb=..." />
-                    <p className="text-xs text-muted-foreground">Google Maps → tu local → Compartir → Insertar mapa → copia el <code>src</code> del iframe</p>
+                    <p className="text-xs text-muted-foreground">Google Maps â tu local â Compartir â Insertar mapa â copia el <code>src</code> del iframe</p>
                   </div>
           <Button type="submit" className="w-full">
             Crear servicio
@@ -1437,7 +1437,7 @@ function CreateBarberForm({ services, onSubmit }: { services: ServiceWithAddons[
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-3">
-          <Field name="display_name" label="Nombre público" required />
+          <Field name="display_name" label="Nombre pÃºblico" required />
           <Field name="specialty" label="Especialidad" />
           <div className="space-y-1">
             <Label htmlFor="bio">Bio</Label>
