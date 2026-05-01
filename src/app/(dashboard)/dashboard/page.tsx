@@ -59,6 +59,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         stats={{ totalCompleted: 47, upcomingConfirmed: 8, expectedToday: 3250, expectedWeek: 18500 }}
         todayStr={todayStr}
         initialTab={initialTab}
+        ratings={[]}
+        emailNotifications={[]}
       />
     );
   }
@@ -115,6 +117,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         bookings={(bookingsRaw || []) as never}
         paymentMethods={(paymentMethodsRaw || []) as ClientPaymentMethod[]}
         initialTab={initialTab}
+        ratings={[]}
+        emailNotifications={[]}
       />
     );
   }
@@ -167,6 +171,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         upcomingBookings={(upcomingBookingsRaw || []) as never}
         expectedToday={expectedToday}
         initialTab={initialTab}
+        ratings={[]}
+        emailNotifications={[]}
       />
     );
   }
