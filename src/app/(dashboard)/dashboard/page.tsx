@@ -117,8 +117,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         bookings={(bookingsRaw || []) as never}
         paymentMethods={(paymentMethodsRaw || []) as ClientPaymentMethod[]}
         initialTab={initialTab}
-        ratings={[]}
-        emailNotifications={[]}
       />
     );
   }
