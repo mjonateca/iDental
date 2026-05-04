@@ -1,5 +1,5 @@
 -- ============================================================
--- iDental — Row Level Security (RLS)
+-- iBarber — Row Level Security (RLS)
 -- ============================================================
 
 -- Habilitar RLS en todas las tablas
@@ -15,7 +15,7 @@ alter table public.reviews          enable row level security;
 -- SHOPS
 -- ============================================================
 
--- Lectura pública (página de clínica dental es pública)
+-- Lectura pública (página de barbería es pública)
 create policy "shops_public_read" on public.shops
   for select using (true);
 
@@ -37,14 +37,14 @@ create policy "shops_owner_delete" on public.shops
 create policy "barbers_public_read" on public.barbers
   for select using (true);
 
--- Cada dentista gestiona su propio perfil
+-- Cada barbero gestiona su propio perfil
 create policy "barbers_self_insert" on public.barbers
   for insert with check (auth.uid() = user_id);
 
 create policy "barbers_self_update" on public.barbers
   for update using (auth.uid() = user_id);
 
--- El dueño del shop también puede ver los dentistas de su tienda
+-- El dueño del shop también puede ver los barberos de su tienda
 create policy "barbers_shop_owner_read" on public.barbers
   for select using (
     shop_id in (
@@ -141,7 +141,7 @@ create policy "bookings_shop_owner_read" on public.bookings
     )
   );
 
--- Dentistas ven sus propias reservas
+-- Barberos ven sus propias reservas
 create policy "bookings_barber_read" on public.bookings
   for select using (
     barber_id in (
@@ -166,7 +166,7 @@ create policy "bookings_client_cancel" on public.bookings
   )
   with check (status = 'cancelled');
 
--- Dueños y dentistas pueden actualizar estado
+-- Dueños y barberos pueden actualizar estado
 create policy "bookings_shop_update" on public.bookings
   for update using (
     shop_id in (

@@ -3,7 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CalendarDays, Camera, Clock, Scissors, Users } from "lucide-react";
+import { CalendarDays, Camera, Clock, Star, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -114,10 +114,10 @@ export default function BarberDashboardClient({
   return (
     <div className="max-w-6xl p-4 md:p-8">
       <div className="mb-7">
-        <p className="text-sm text-muted-foreground">Vista dentista</p>
+        <p className="text-sm text-muted-foreground">Vista profesional</p>
         <h1 className="text-2xl font-bold">{profile.display_name}</h1>
         <p className="text-muted-foreground">
-          {profile.shops?.name ? `Trabajando en ${profile.shops.name}` : "Dentista independiente o pendiente de vinculación"}
+          {profile.shops?.name ? `Trabajando en ${profile.shops.name}` : "Profesional independiente o pendiente de vinculación"}
         </p>
       </div>
 
@@ -125,7 +125,7 @@ export default function BarberDashboardClient({
         <Metric title="Turnos hoy" value={todayBookings.length} icon={Clock} />
         <Metric title="Próximos turnos" value={upcomingBookings.length} icon={CalendarDays} />
         <Metric title="Clientes hoy" value={new Set(todayBookings.map((booking) => booking.clients?.name).filter(Boolean)).size} icon={Users} />
-        <Metric title="Estimado hoy" value={formatCurrency(expectedToday)} icon={Scissors} />
+        <Metric title="Estimado hoy" value={formatCurrency(expectedToday)} icon={Star} />
       </div>
 
       <div className="mb-6 flex gap-2 overflow-x-auto pb-2">

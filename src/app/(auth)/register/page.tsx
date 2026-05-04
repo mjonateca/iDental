@@ -149,7 +149,7 @@ export default function RegisterPage() {
               {...register("accountType")}
             >
               <option value="client">Cliente</option>
-              <option value="barber">Dentista</option>
+              <option value="barber">Profesional</option>
               <option value="barbershop">Clínica dental</option>
             </select>
           </div>
@@ -296,7 +296,7 @@ export default function RegisterPage() {
             ) : accountType === "barbershop" ? (
               "Registrar clínica dental"
             ) : accountType === "barber" ? (
-              "Crear cuenta de dentista"
+              "Crear cuenta profesional"
             ) : (
               "Crear cuenta"
             )}

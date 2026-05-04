@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Scissors, UserRound } from "lucide-react";
+import { UserRound } from "lucide-react";
+import LogoMark from "@/components/branding/logo-mark";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/client";
@@ -10,7 +11,7 @@ import type { AccountRole } from "@/types/database";
 
 const ROLE_LABELS: Record<AccountRole, string> = {
   client: "cliente",
-  barber: "dentista",
+  barber: "profesional",
   shop_owner: "clínica dental",
 };
 
@@ -29,7 +30,7 @@ export default function BookingRoleNotice({ role, shopSlug }: { role: AccountRol
       <Card className="mx-auto max-w-md overflow-hidden border-none">
         <div className="bg-[hsl(var(--foreground))] px-6 py-7 text-white">
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-white/12">
-            <Scissors className="h-6 w-6" />
+            <LogoMark className="h-6 w-6" />
           </div>
           <p className="text-sm text-white/70">Reserva de cita</p>
           <h1 className="mt-1 text-2xl font-bold">Necesitas una cuenta cliente</h1>
@@ -42,7 +43,7 @@ export default function BookingRoleNotice({ role, shopSlug }: { role: AccountRol
           <div className="rounded-lg border bg-muted/60 p-4">
             <div className="flex items-start gap-3">
               <UserRound className="mt-0.5 h-5 w-5 text-primary" />
-              <p className="text-sm">Cierra esta sesión e inicia con una cuenta cliente para reservar y evaluar dentistas.</p>
+              <p className="text-sm">Cierra esta sesión e inicia con una cuenta cliente para reservar y evaluar profesionales.</p>
             </div>
           </div>
           <div className="grid gap-2">

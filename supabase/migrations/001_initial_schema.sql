@@ -1,5 +1,5 @@
 -- ============================================================
--- iDental — Migración inicial (Fase 1)
+-- iBarber — Migración inicial (Fase 1)
 -- Zona horaria: America/Santo_Domingo
 -- ============================================================
 
@@ -8,7 +8,7 @@ create extension if not exists "uuid-ossp";
 create extension if not exists "unaccent";
 
 -- ============================================================
--- SHOPS — Clínicas dentales
+-- SHOPS — Barberías
 -- ============================================================
 create table public.shops (
   id               uuid primary key default uuid_generate_v4(),
@@ -39,7 +39,7 @@ create index shops_owner_id_idx on public.shops(owner_id);
 create index shops_slug_idx     on public.shops(slug);
 
 -- ============================================================
--- BARBERS — Dentistas
+-- BARBERS — Barberos
 -- ============================================================
 create table public.barbers (
   id             uuid primary key default uuid_generate_v4(),
@@ -58,7 +58,7 @@ create index barbers_shop_id_idx  on public.barbers(shop_id);
 create index barbers_user_id_idx  on public.barbers(user_id);
 
 -- ============================================================
--- SERVICES — Servicios de una clínica dental
+-- SERVICES — Servicios de una barbería
 -- ============================================================
 create table public.services (
   id           uuid primary key default uuid_generate_v4(),
@@ -74,7 +74,7 @@ create table public.services (
 create index services_shop_id_idx on public.services(shop_id);
 
 -- ============================================================
--- BARBER_SERVICES — Relación dentista ↔ servicio
+-- BARBER_SERVICES — Relación barbero ↔ servicio
 -- ============================================================
 create table public.barber_services (
   barber_id  uuid not null references public.barbers(id) on delete cascade,
@@ -144,7 +144,7 @@ create table public.reviews (
 create index reviews_barber_id_idx on public.reviews(barber_id);
 
 -- ============================================================
--- FUNCIÓN: actualizar rating promedio del dentista
+-- FUNCIÓN: actualizar rating promedio del barbero
 -- ============================================================
 create or replace function update_barber_rating()
 returns trigger language plpgsql security definer as $$

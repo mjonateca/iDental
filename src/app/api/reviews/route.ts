@@ -32,7 +32,7 @@ export async function POST(request: Request) {
 
   if (!booking) return NextResponse.json({ error: "Reserva no encontrada" }, { status: 404 });
   if (booking.status !== "completed") {
-    return NextResponse.json({ error: "Solo puedes evaluar consultas completados" }, { status: 409 });
+    return NextResponse.json({ error: "Solo puedes evaluar cortes completados" }, { status: 409 });
   }
 
   const { data, error } = await context.supabase

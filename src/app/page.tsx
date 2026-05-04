@@ -76,7 +76,7 @@ export default async function HomePage({ searchParams }: Props) {
           <div className="max-w-2xl">
             <h1 className="text-4xl font-bold mb-4 leading-tight">Reserva tu cita dental cerca de ti</h1>
             <p className="text-muted-foreground text-lg mb-6">
-              Encuentra clínicas dentales por ciudad, compara servicios y agenda con el dentista adecuado.
+              Encuentra clínicas dentales por ciudad, compara servicios y agenda con el profesional adecuado.
             </p>
           </div>
 

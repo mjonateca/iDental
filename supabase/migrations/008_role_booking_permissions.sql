@@ -1,5 +1,5 @@
 -- ============================================================
--- iDental — Permisos por rol para reservas y gestión de dentistas
+-- iBarber — Permisos por rol para reservas y gestión de barberos
 -- ============================================================
 
 drop policy if exists "clients_self_insert" on public.clients;

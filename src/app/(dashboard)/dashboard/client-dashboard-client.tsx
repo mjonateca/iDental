@@ -200,7 +200,7 @@ export default function ClientDashboardClient({
       <div className="mb-6 grid gap-4 md:grid-cols-3">
         <Metric title="Reservas" value={bookings.length} />
         <Metric title="Clínicas dentales favoritas" value={shopFavorites.size} />
-        <Metric title="Dentistas favoritos" value={barberFavorites.size} />
+        <Metric title="Profesionales favoritos" value={barberFavorites.size} />
       </div>
 
       <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
@@ -319,7 +319,7 @@ export default function ClientDashboardClient({
 
                   {booking.status === "completed" && !reviewedBookingIds.has(booking.id) && (
                     <form onSubmit={(event) => submitReview(event, booking)} className="mt-3 space-y-2">
-                      <Label>Evaluar dentista</Label>
+                      <Label>Evaluar profesional</Label>
                       <select name="rating" className="h-10 w-full rounded-md border bg-background px-3 text-sm" defaultValue="5">
                         {[5, 4, 3, 2, 1].map((rating) => (
                           <option key={rating} value={rating}>
@@ -382,11 +382,11 @@ export default function ClientDashboardClient({
 
           <Card className="shadow-none">
             <CardHeader>
-              <CardTitle>Dentistas favoritos</CardTitle>
+              <CardTitle>Profesionales favoritos</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {favoriteBarbers.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Todavía no has marcado dentistas favoritos.</p>
+                <p className="text-sm text-muted-foreground">Todavía no has marcado profesionales favoritos.</p>
               ) : (
                 favoriteBarbers.map((barber) => (
                   <div key={barber.id} className="rounded-lg border p-4">

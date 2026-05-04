@@ -1,5 +1,5 @@
 -- ============================================================
--- iDental — Roles, ubicación, gestión avanzada y notificaciones
+-- iBarber — Roles, ubicación, gestión avanzada y notificaciones
 -- ============================================================
 
 -- Tipos seguros

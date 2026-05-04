@@ -35,11 +35,13 @@ export interface Shop {
   name: string;
   slug: string;
   logo_url: string | null;
-  banner_image_url?: string | null;
-  maps_url?: string | null;
+  banner_url: string | null;
+  maps_url: string | null;
   address: string | null;
   lat: number | null;
   lng: number | null;
+  currency: string;
+  currency_symbol: string;
   phone: string | null;
   whatsapp: string | null;
   country_code: string | null;
@@ -47,8 +49,10 @@ export interface Shop {
   city: string | null;
   description: string | null;
   is_active: boolean;
+  reminder_channels: ("email" | "whatsapp")[];
   city_normalized?: string | null;
   opening_hours: Json;
+  reminder_lead_minutes: number;
   deposit_required: boolean;
   deposit_amount: number;
   payments_enabled: boolean;
@@ -86,16 +90,6 @@ export interface Service {
   created_at: string;
 }
 
-export interface ServiceAddon {
-  id: string;
-  service_id: string;
-  name: string;
-  price: number;
-  duration_min: number;
-  is_active: boolean;
-  created_at: string;
-}
-
 export interface BarberService {
   barber_id: string;
   service_id: string;
@@ -103,7 +97,10 @@ export interface BarberService {
 
 export interface Booking {
   id: string;
-  client_id: string;
+  client_id: string | null;
+  client_name: string | null;
+  client_phone: string | null;
+  notes: string | null;
   barber_id: string;
   shop_id: string;
   service_id: string;
@@ -115,24 +112,13 @@ export interface Booking {
   deposit_amount: number;
   payment_status: PaymentStatus;
   payment_required: boolean;
-  base_amount: number;
   payment_amount: number;
   payment_currency: string;
-  guest_count: number;
-  notes: string | null;
   paid_at: string | null;
   confirmed_at: string | null;
   confirmed_by_user_id: string | null;
   whatsapp_reminder_sent: boolean;
   created_at: string;
-}
-
-export interface BookingAddon {
-  booking_id: string;
-  addon_id: string;
-  name_snapshot: string;
-  price_snapshot: number;
-  duration_snapshot: number;
 }
 
 export interface Client {
@@ -210,7 +196,7 @@ export interface NotificationEvent {
   booking_id: string | null;
   shop_id: string | null;
   client_id: string | null;
-  channel: "whatsapp" | "email";
+  channel: "email" | "whatsapp";
   type: NotificationType;
   status: NotificationStatus;
   scheduled_for: string | null;
@@ -224,87 +210,12 @@ export interface NotificationTemplate {
   id: string;
   shop_id: string | null;
   type: NotificationType;
-  channel: "whatsapp" | "email";
+  channel: "email" | "whatsapp";
   is_active: boolean;
   send_offset_minutes: number | null;
   body: string;
   created_at: string;
   updated_at: string;
-}
-
-export interface BarberRating {
-  id: string;
-  barber_id: string;
-  client_id: string;
-  booking_id: string;
-  rating: number;
-  comment: string | null;
-  created_at: string;
-  barbers?: { id: string; display_name: string; shop_id: string } | null;
-}
-
-export interface EmailNotification {
-  id: string;
-  shop_id: string;
-  booking_id: string | null;
-  client_id: string | null;
-  type: string;
-  status: string;
-  recipient_email: string | null;
-  recipient_name: string | null;
-  sent_at: string | null;
-  error_message: string | null;
-  created_at: string;
-}
-
-export interface BarberRating {
-  id: string;
-  barber_id: string;
-  client_id: string;
-  booking_id: string;
-  rating: number;
-  comment: string | null;
-  created_at: string;
-  barbers?: { id: string; display_name: string; shop_id: string } | null;
-}
-
-export interface EmailNotification {
-  id: string;
-  shop_id: string;
-  booking_id: string | null;
-  client_id: string | null;
-  type: string;
-  status: string;
-  recipient_email: string | null;
-  recipient_name: string | null;
-  sent_at: string | null;
-  error_message: string | null;
-  created_at: string;
-}
-
-export interface BarberRating {
-  id: string;
-  barber_id: string;
-  client_id: string;
-  booking_id: string;
-  rating: number;
-  comment: string | null;
-  created_at: string;
-  barbers?: { id: string; display_name: string; shop_id: string } | null;
-}
-
-export interface EmailNotification {
-  id: string;
-  shop_id: string;
-  booking_id: string | null;
-  client_id: string | null;
-  type: string;
-  status: string;
-  recipient_email: string | null;
-  recipient_name: string | null;
-  sent_at: string | null;
-  error_message: string | null;
-  created_at: string;
 }
 
 export interface Review {
@@ -398,6 +309,45 @@ export interface BookingPayment {
 
 export type ShopInsert = Omit<Shop, "id" | "created_at">;
 export type BarberInsert = Omit<Barber, "id" | "created_at">;
+export interface BarberRating {
+  id: string;
+  barber_id: string;
+  client_id: string;
+  booking_id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+  barbers?: { id: string; display_name: string; shop_id: string } | null;
+}
+
+export interface EmailNotification {
+  id: string;
+  shop_id: string;
+  booking_id: string | null;
+  client_id: string | null;
+  type: string;
+  status: string;
+  recipient_email: string | null;
+  recipient_name: string | null;
+  sent_at: string | null;
+  error_message: string | null;
+  created_at: string;
+}
+
+export interface PendingWhatsappReminder {
+  event_id: string;
+  booking_id: string;
+  scheduled_for: string | null;
+  client_name: string;
+  client_phone: string | null;
+  client_whatsapp: string | null;
+  service_name: string;
+  barber_name: string;
+  date: string;
+  start_time: string;
+}
+
+
 export type ServiceInsert = Omit<Service, "id" | "created_at">;
 export type BookingInsert = Omit<Booking, "id" | "created_at">;
 export type ClientInsert = Omit<Client, "id" | "created_at">;

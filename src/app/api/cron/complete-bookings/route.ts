@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/server";
+import { buildAppUrl } from "@/lib/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -20,7 +21,7 @@ function buildReviewEmailHtml({
   shopSlug: string;
 }) {
   const formattedDate = format(new Date(date + "T12:00:00"), "EEEE d 'de' MMMM yyyy", { locale: es });
-  const dashboardUrl = `https://ibarber.app/dashboard`;
+  const dashboardUrl = buildAppUrl("/dashboard?tab=bookings");
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -29,33 +30,33 @@ function buildReviewEmailHtml({
   <table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px">
     <tr><td align="center">
       <table width="100%" style="max-width:520px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.1)">
-        <tr><td style="background:#0ea5e9;padding:28px 32px;text-align:center">
-          <p style="margin:0;font-size:32px">Ã¢Â­Â</p>
-          <h1 style="margin:8px 0 0;color:#fff;font-size:20px;font-weight:700">ÃÂ¿QuÃÂ© tal tu visita?</h1>
+        <tr><td style="background:#0d9488;padding:28px 32px;text-align:center">
+          <p style="margin:0;font-size:32px">⭐</p>
+          <h1 style="margin:8px 0 0;color:#fff;font-size:20px;font-weight:700">¿Qué tal tu visita?</h1>
           <p style="margin:4px 0 0;color:rgba(255,255,255,.8);font-size:14px">${shopName}</p>
         </td></tr>
         <tr><td style="padding:28px 32px">
           <p style="margin:0 0 16px;color:#374151;font-size:15px">Hola <strong>${clientName}</strong>,</p>
           <p style="margin:0 0 20px;color:#374151;font-size:15px">
             Tu cita del <strong>${formattedDate}</strong> con <strong>${barberName}</strong> (${serviceName}) ha finalizado.
-            Nos encantarÃÂ­a saber tu opiniÃÂ³n.
+            Nos encantaría saber tu opinión.
           </p>
           <table width="100%" style="background:#f9fafb;border-radius:8px;padding:16px" cellpadding="0" cellspacing="0">
-            <tr><td style="padding:6px 0"><span style="color:#6b7280;font-size:13px">Barbero</span><br><strong style="color:#111827;font-size:15px">${barberName}</strong></td></tr>
+            <tr><td style="padding:6px 0"><span style="color:#6b7280;font-size:13px">Profesional</span><br><strong style="color:#111827;font-size:15px">${barberName}</strong></td></tr>
             <tr><td style="padding:6px 0"><span style="color:#6b7280;font-size:13px">Servicio</span><br><strong style="color:#111827;font-size:15px">${serviceName}</strong></td></tr>
             <tr><td style="padding:6px 0"><span style="color:#6b7280;font-size:13px">Fecha</span><br><strong style="color:#111827;font-size:15px">${formattedDate}</strong></td></tr>
           </table>
           <div style="text-align:center;margin-top:24px">
-            <a href="${dashboardUrl}" style="background:#0ea5e9;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">
-              Dejar mi reseÃÂ±a
+            <a href="${dashboardUrl}" style="background:#0d9488;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">
+              Dejar mi reseña
             </a>
           </div>
           <p style="margin:20px 0 0;color:#6b7280;font-size:13px;text-align:center">
-            Tu opiniÃÂ³n ayuda a otros clientes y mejora nuestro servicio.
+            Tu opinión ayuda a otros clientes y mejora nuestro servicio.
           </p>
         </td></tr>
         <tr><td style="padding:16px 32px;border-top:1px solid #f3f4f6;text-align:center">
-          <p style="margin:0;color:#9ca3af;font-size:12px">Powered by <a href="https://ibarber.app" style="color:#0ea5e9;text-decoration:none">iBarber</a></p>
+          <p style="margin:0;color:#9ca3af;font-size:12px">Powered by <a href="${buildAppUrl()}" style="color:#0d9488;text-decoration:none">iDental</a></p>
         </td></tr>
       </table>
     </td></tr>
@@ -135,10 +136,10 @@ export async function GET(request: Request) {
 
           const clientName = clientData.name || "Cliente";
           const barberName =
-            (booking.barbers as unknown as { display_name: string } | null)?.display_name || "Tu dentista";
+            (booking.barbers as unknown as { display_name: string } | null)?.display_name || "Tu profesional";
           const serviceName = (booking.services as unknown as { name: string } | null)?.name || "Servicio";
           const shopObj = booking.shops as unknown as { name: string; slug: string } | null;
-          const shopName = shopObj?.name || "La clÃÂ­nica dental";
+          const shopName = shopObj?.name || "La clínica dental";
           const shopSlug = shopObj?.slug || "";
 
           const html = buildReviewEmailHtml({
@@ -153,7 +154,7 @@ export async function GET(request: Request) {
           const result = await resend.emails.send({
             from: `${shopName} <${fromAddress}>`,
             to: recipientEmail,
-            subject: `ÃÂ¿CÃÂ³mo estuvo tu visita a ${shopName}?`,
+            subject: `¿Cómo estuvo tu visita a ${shopName}?`,
             html,
           });
 

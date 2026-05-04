@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
+import { getCitiesForCountry, getCountryName, getCurrencyForCountry } from "@/lib/locations";
+import { buildAppUrl } from "@/lib/utils";
 import type { OnboardingData } from "../onboarding-wizard";
 
 const schema = z.object({
@@ -49,12 +51,16 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
     // Modo demo: simular guardado y redirigir
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith("http")) {
       await new Promise((r) => setTimeout(r, 800));
-      toast({ title: "¡Clínica dental creada! (demo)", description: "idental.app/sonrisa-clara ya está lista" });
-      onComplete("sonrisa-clara");
+      toast({ title: "¡Clínica dental creada! (demo)", description: buildAppUrl("/barber-king") + " ya está lista" });
+      onComplete("barber-king");
       return;
     }
 
     const supabase = createClient();
+
+    const targetCountryCode = data.countryCode || "US";
+    const targetCountryName = data.countryName || getCountryName(targetCountryCode);
+    const targetCity = data.city || getCitiesForCountry(targetCountryCode)[0] || "New York";
 
     try {
       // 1. Crear el shop
@@ -67,9 +73,10 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
           phone: data.phone || null,
           whatsapp: data.phone || null,
           address: data.address || null,
-          country_code: data.countryCode || "DO",
-          country_name: data.countryName || "República Dominicana",
-          city: data.city || "Santo Domingo",
+          country_code: targetCountryCode,
+          country_name: targetCountryName,
+          city: targetCity,
+          currency: data.currency || getCurrencyForCountry(targetCountryCode).currency,
           description: data.description || null,
           opening_hours: {
             lunes:     { open: "09:00", close: "19:00", closed: false },
@@ -84,7 +91,7 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
         .select()
         .single();
 
-      if (shopError && /country_code|country_name|city|description|whatsapp/.test(shopError.message)) {
+      if (shopError && /country_code|country_name|city|description|whatsapp|currency/.test(shopError.message)) {
         const fallback = await supabase
           .from("shops")
           .insert({
@@ -121,7 +128,7 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
               name: s.name,
               duration_min: s.duration_min,
               price: s.price,
-              currency: "DOP",
+              currency: shop.currency || "USD",
               description: null,
               category: "General",
               is_visible: true,
@@ -136,7 +143,7 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
                 name: s.name,
                 duration_min: s.duration_min,
                 price: s.price,
-                currency: "DOP",
+                currency: shop.currency || "USD",
               }))
             );
           svcError = fallback.error;
@@ -144,7 +151,7 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
         if (svcError) throw svcError;
       }
 
-      // 3. Crear el perfil de dentista del dueño
+      // 3. Crear el perfil de profesional del dueño
       let { error: barberError } = await supabase
         .from("barbers")
         .insert({
@@ -174,7 +181,7 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
 
       toast({
         title: "¡Clínica dental creada!",
-        description: `idental.app/${shop.slug} ya está lista`,
+        description: `${buildAppUrl(`/${shop.slug}`)} ya está lista`,
       });
 
       onComplete(shop.slug);
@@ -197,7 +204,7 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
             <User className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <CardTitle>Tu perfil de dentista</CardTitle>
+            <CardTitle>Tu perfil de profesional</CardTitle>
             <CardDescription>Cómo te verán tus clientes</CardDescription>
           </div>
         </div>
@@ -206,10 +213,10 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="barberName">Tu nombre como dentista *</Label>
+            <Label htmlFor="barberName">Tu nombre como profesional *</Label>
             <Input
               id="barberName"
-              placeholder="Ej: Dra. Laura Pérez"
+              placeholder="Ej: Juan el Maestro"
               {...register("barberName")}
             />
             {errors.barberName && (
@@ -225,7 +232,7 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
             <textarea
               id="barberBio"
               className="flex min-h-[80px] w-full rounded-xl border border-input bg-background px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
-              placeholder="Ortodoncia y odontología estética con enfoque en atención sin fricción."
+              placeholder="10 años de experiencia, especialista en cortes clásicos..."
               maxLength={200}
               {...register("barberBio")}
             />
@@ -245,7 +252,7 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
             </p>
             <p>
               <span className="text-muted-foreground">URL:</span>{" "}
-              <strong>idental.app/{data.slug}</strong>
+              <strong>{buildAppUrl(`/${data.slug}`)}</strong>
             </p>
             <p>
               <span className="text-muted-foreground">Servicios:</span>{" "}

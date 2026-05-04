@@ -47,7 +47,7 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
           className="absolute inset-0 opacity-30"
           style={{
             backgroundImage:
-              `url('${shop.banner_image_url || "https://images.unsplash.com/photo-1517832606299-7ae9b720a186?auto=format&fit=crop&w=1200&q=80"}')`,
+              `url('${shop.banner_url || "https://images.unsplash.com/photo-1609840114035-3c981b782dfe?auto=format&fit=crop&w=1200&q=80"}')`,
             backgroundSize: "cover",
             backgroundPosition: "center",
           }}
@@ -100,10 +100,10 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
       </div>
 
       <div className="mx-auto max-w-3xl px-4 py-6 space-y-8">
-        {/* Dentistas */}
+        {/* Profesionales */}
         {activeBarbers.length > 0 && (
           <section>
-            <h2 className="text-lg font-semibold mb-4">Nuestros dentistas</h2>
+            <h2 className="text-lg font-semibold mb-4">Nuestros profesionales</h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {activeBarbers.map((barber) => (
                 <button
@@ -218,13 +218,13 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
                   : `/${shop.slug}/reservar`
               }
             >
-              {selectedBarber ? "Reservar con este dentista" : "Reservar cita"}
+              {selectedBarber ? "Reservar con este profesional" : "Reservar cita"}
             </Link>
           </Button>
 
           {viewerRole && viewerRole !== "client" && (
             <p className="mt-3 rounded-lg border bg-background p-3 text-center text-xs text-muted-foreground">
-              Estás viendo esta página como {viewerRole === "barber" ? "dentista" : "clínica dental"}.
+              Estás viendo esta página como {viewerRole === "barber" ? "profesional" : "clínica dental"}.
               Para reservar, usa una cuenta cliente.
             </p>
           )}

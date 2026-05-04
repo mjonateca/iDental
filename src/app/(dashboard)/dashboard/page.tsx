@@ -1,12 +1,12 @@
 import { redirect } from "next/navigation";
-import { addDays, format } from "date-fns";
-import { es } from "date-fns/locale";
 import type { Metadata } from "next";
-import type { BarberRating, Barber, Client, ClientPaymentMethod, EmailNotification, Profile, Service, Shop, ShopPaymentMethod, ShopSubscription } from "@/types/database";
+import type { Barber, BarberRating, Client, ClientPaymentMethod, EmailNotification, PendingWhatsappReminder, Profile, Service, Shop, ShopPaymentMethod, ShopSubscription } from "@/types/database";
 import { ensureAccountRecords } from "@/lib/account-repair";
 import { IS_DEMO, demoBookings, demoShop } from "@/lib/demo-data";
+import { getTimeZoneForCountry } from "@/lib/locations";
 import { buildShopAnalytics } from "@/lib/shop-analytics";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
+import { addDaysToDateString, formatLongDateInTimeZone, getCurrentDateInTimeZone } from "@/lib/utils";
 import BarberDashboardClient from "./barber-dashboard-client";
 import ClientDashboardClient from "./client-dashboard-client";
 import DashboardClient from "./dashboard-client";
@@ -18,9 +18,9 @@ type DashboardPageProps = {
 };
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
-  const todayStr = format(new Date(), "EEEE d 'de' MMMM", { locale: es });
   const { tab } = await searchParams;
   const initialTab = tab || "summary";
+  const demoTodayStr = formatLongDateInTimeZone(getTimeZoneForCountry(demoShop.country_code || ""));
 
   if (IS_DEMO) {
     return (
@@ -31,14 +31,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         services={[]}
         barbers={[]}
         clients={[]}
-        clientEmailById={{
-          "demo-client-1": "pedro@example.com",
-          "demo-client-2": "luis@example.com",
-          "demo-client-3": "miguel@example.com",
-          "demo-client-4": "roberto@example.com",
-        }}
-        ownerEmail="clinica@sonrisaclara.com"
         notificationEvents={[]}
+        ratings={[]}
+        emailNotifications={[]}
+        pendingWhatsappReminders={[]}
         subscription={null}
         paymentMethods={[]}
         analytics={{
@@ -57,10 +53,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           avgLeadMinutes: 38,
         }}
         stats={{ totalCompleted: 47, upcomingConfirmed: 8, expectedToday: 3250, expectedWeek: 18500 }}
-        todayStr={todayStr}
+        todayStr={demoTodayStr}
         initialTab={initialTab}
-        ratings={[]}
-        emailNotifications={[]}
       />
     );
   }
@@ -82,7 +76,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     const [{ data: shopsRaw }, { data: favShops }, { data: favBarbers }, { data: bookingsRaw }, { data: paymentMethodsRaw }] = await Promise.all([
       admin
         .from("shops")
-        .select("*, barbers(id, display_name, rating), services(*, service_addons(*))")
+        .select("*, barbers(id, display_name, rating), services(*)")
         .eq("is_active", true)
         .order("city")
         .order("name")
@@ -91,7 +85,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       admin.from("favorite_barbers").select("barber_id").eq("client_id", client.id),
       admin
         .from("bookings")
-        .select("*, shops(name, slug), barbers(display_name), services(name, price, currency), booking_addons(*), reviews(id)")
+        .select("*, shops(name, slug), barbers(display_name), services(name, price, currency), reviews(id)")
         .eq("client_id", client.id)
         .order("date", { ascending: false })
         .order("start_time", { ascending: false })
@@ -133,20 +127,21 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     const barber = barberData as (Barber & { shops?: Shop | null; barber_services?: Array<{ service_id: string }> }) | null;
     if (!barber) redirect("/");
 
-    const today = format(new Date(), "yyyy-MM-dd");
-    const weekEnd = format(addDays(new Date(), 7), "yyyy-MM-dd");
+    const barberTimeZone = getTimeZoneForCountry(barber.shops?.country_code || "");
+    const today = getCurrentDateInTimeZone(barberTimeZone);
+    const weekEnd = addDaysToDateString(today, 7);
 
     const [{ data: todayBookingsRaw }, { data: upcomingBookingsRaw }, { data: servicesRaw }] = await Promise.all([
       admin
         .from("bookings")
-        .select("*, clients(id, user_id, name, phone, whatsapp), shops(name, slug), services(name, price, currency), booking_addons(*)")
+        .select("*, clients(name, phone, whatsapp), shops(name, slug), services(name, price, currency)")
         .eq("barber_id", barber.id)
         .eq("date", today)
         .not("status", "in", '("cancelled","no_show")')
         .order("start_time"),
       admin
         .from("bookings")
-        .select("*, clients(id, user_id, name, phone, whatsapp), shops(name, slug), services(name, price, currency), booking_addons(*)")
+        .select("*, clients(name, phone, whatsapp), shops(name, slug), services(name, price, currency)")
         .eq("barber_id", barber.id)
         .gte("date", today)
         .lte("date", weekEnd)
@@ -177,8 +172,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const shop = shopData as Shop | null;
   if (!shop) redirect("/onboarding");
 
-  const today = format(new Date(), "yyyy-MM-dd");
-  const weekEnd = format(addDays(new Date(), 7), "yyyy-MM-dd");
+  const shopTimeZone = getTimeZoneForCountry(shop.country_code || "");
+  const today = getCurrentDateInTimeZone(shopTimeZone);
+  const weekEnd = addDaysToDateString(today, 7);
+  const todayStr = formatLongDateInTimeZone(shopTimeZone);
 
   const [
     { data: todayBookingsRaw },
@@ -192,14 +189,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     await Promise.all([
       admin
         .from("bookings")
-        .select("*, clients(id, user_id, name, phone, whatsapp), barbers(display_name), services(name, duration_min, price), booking_addons(*)")
+        .select("*, clients(name, phone, whatsapp), barbers(display_name), services(name, duration_min, price, currency)")
         .eq("shop_id", shop.id)
         .eq("date", today)
         .not("status", "in", '("cancelled","no_show")')
         .order("start_time"),
       admin
         .from("bookings")
-        .select("*, clients(id, user_id, name, phone, whatsapp), barbers(display_name), services(name, duration_min, price), booking_addons(*)")
+        .select("*, clients(name, phone, whatsapp), barbers(display_name), services(name, duration_min, price, currency)")
         .eq("shop_id", shop.id)
         .gte("date", today)
         .not("status", "in", '("cancelled","no_show")')
@@ -210,7 +207,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       admin.from("bookings").select("*", { count: "exact", head: true }).eq("shop_id", shop.id).eq("status", "confirmed").gte("date", today),
       admin
         .from("bookings")
-        .select("date, base_amount, services(price)")
+        .select("date, services(price)")
         .eq("shop_id", shop.id)
         .gte("date", today)
         .lte("date", weekEnd)
@@ -224,33 +221,66 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const bookings = (bookingsRaw || []) as unknown as BookingWithRelations[];
   const clientIds = [...new Set(bookings.map((booking) => booking.client_id).filter(Boolean))];
 
-  const expectedToday = todayBookings.reduce((sum, booking) => sum + Number(booking.base_amount || booking.services?.price || 0), 0);
-  const expectedWeek = ((weekBookingsRaw || []) as Array<{ base_amount?: number | null; services?: { price?: number | null } | null }>).reduce(
-    (sum, booking) => sum + Number(booking.base_amount || booking.services?.price || 0),
+  const expectedToday = todayBookings.reduce((sum, booking) => sum + Number(booking.services?.price || 0), 0);
+  const expectedWeek = ((weekBookingsRaw || []) as Array<{ services?: { price?: number | null } | null }>).reduce(
+    (sum, booking) => sum + Number(booking.services?.price || 0),
     0
   );
   const analytics = buildShopAnalytics(bookings as never);
+  const nowIso = new Date().toISOString();
 
-  const [{ data: services }, { data: barbers }, { data: clients }, { data: notificationEvents }, { data: ratingsRaw }, { data: emailNotificationsRaw }] = await Promise.all([
-    admin.from("services").select("*, service_addons(*)").eq("shop_id", shop.id).order("sort_order").order("name"),
+  const [{ data: services }, { data: barbers }, { data: clients }, { data: notificationEvents }, { data: ratingsRaw }, { data: emailNotificationsRaw }, { data: pendingWhatsappEventsRaw }] = await Promise.all([
+    admin.from("services").select("*").eq("shop_id", shop.id).order("sort_order").order("name"),
     admin.from("barbers").select("*, barber_services(service_id)").eq("shop_id", shop.id).order("display_name"),
     clientIds.length
-      ? admin.from("clients").select("id,user_id,name,phone,whatsapp,city,country_name").in("id", clientIds).limit(100)
+      ? admin.from("clients").select("id,name,phone,whatsapp,city,country_name").in("id", clientIds).limit(100)
       : Promise.resolve({ data: [] }),
     admin.from("notification_events").select("*").eq("shop_id", shop.id).order("created_at", { ascending: false }).limit(20),
     admin.from("reviews").select("*, barbers!inner(id, display_name, shop_id)").eq("barbers.shop_id", shop.id).order("created_at", { ascending: false }).limit(200),
-    admin.from("email_notifications").select("*").eq("shop_id", shop.id).order("created_at", { ascending: false }).limit(50),
+    admin
+      .from("email_notifications")
+      .select("*")
+      .eq("shop_id", shop.id)
+      .eq("status", "sent")
+      .order("created_at", { ascending: false })
+      .limit(50),
+    admin
+      .from("notification_events")
+      .select("id, booking_id, scheduled_for, status")
+      .eq("shop_id", shop.id)
+      .eq("channel", "whatsapp")
+      .eq("type", "booking_reminder")
+      .eq("status", "pending")
+      .lte("scheduled_for", nowIso)
+      .order("scheduled_for", { ascending: true })
+      .limit(20),
   ]);
 
-  const clientUserIds = [...new Set(((clients || []) as Array<{ user_id?: string | null }>).map((client) => client.user_id).filter(Boolean))];
-  const { data: clientProfiles } = clientUserIds.length
-    ? await admin.from("profiles").select("user_id, email").in("user_id", clientUserIds as string[])
-    : { data: [] };
+  const bookingMap = new Map(bookings.map((booking) => [booking.id, booking]));
+  const pendingWhatsappReminders: PendingWhatsappReminder[] = ((pendingWhatsappEventsRaw || []) as Array<{
+    id: string;
+    booking_id: string | null;
+    scheduled_for: string | null;
+  }>)
+    .map((event) => {
+      if (!event.booking_id) return null;
+      const booking = bookingMap.get(event.booking_id);
+      if (!booking) return null;
 
-  const emailByUserId = new Map((clientProfiles || []).map((profile) => [profile.user_id, profile.email || null]));
-  const clientEmailById = Object.fromEntries(
-    ((clients || []) as Array<{ id: string; user_id?: string | null }>).map((client) => [client.id, emailByUserId.get(client.user_id || "") || null])
-  );
+      return {
+        event_id: event.id,
+        booking_id: booking.id,
+        scheduled_for: event.scheduled_for,
+        client_name: booking.clients?.name || booking.client_name || "Cliente",
+        client_phone: booking.client_phone || booking.clients?.phone || null,
+        client_whatsapp: booking.clients?.whatsapp || null,
+        service_name: booking.services?.name || "Servicio",
+        barber_name: booking.barbers?.display_name || "Tu profesional",
+        date: booking.date || "",
+        start_time: booking.start_time,
+      };
+    })
+    .filter(Boolean) as PendingWhatsappReminder[];
 
   return (
     <DashboardClient
@@ -260,11 +290,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       services={(services || []) as never}
       barbers={(barbers || []) as never}
       clients={(clients || []) as never}
-      clientEmailById={clientEmailById}
-      ownerEmail={typedProfile?.email || null}
       notificationEvents={(notificationEvents || []) as never}
       ratings={(ratingsRaw || []) as BarberRating[]}
       emailNotifications={(emailNotificationsRaw || []) as EmailNotification[]}
+      pendingWhatsappReminders={pendingWhatsappReminders}
       subscription={subscriptionRaw as ShopSubscription | null}
       paymentMethods={(paymentMethodsRaw || []) as ShopPaymentMethod[]}
       analytics={analytics}

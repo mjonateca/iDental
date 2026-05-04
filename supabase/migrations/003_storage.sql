@@ -1,8 +1,8 @@
 -- ============================================================
--- iDental — Storage buckets para imágenes
+-- iBarber — Storage buckets para imágenes
 -- ============================================================
 
--- Bucket para logos de clínicas dentales
+-- Bucket para logos de barberías
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'shop-logos',
@@ -12,7 +12,7 @@ values (
   array['image/jpeg', 'image/png', 'image/webp']
 ) on conflict (id) do nothing;
 
--- Bucket para avatares de dentistas
+-- Bucket para avatares de barberos
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'barber-avatars',

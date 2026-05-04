@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/server";
-import { getCountryName } from "@/lib/locations";
+import { getCountryName, getCurrencyForCountry } from "@/lib/locations";
 
 const registerSchema = z.object({
   accountType: z.enum(["client", "barber", "barbershop"]),
@@ -66,6 +66,7 @@ export async function POST(request: Request) {
       phone: data.phone.trim(),
       country_code: data.countryCode,
       country_name: getCountryName(data.countryCode),
+      currency: getCurrencyForCountry(data.countryCode).currency,
       city: data.city,
       address: data.address?.trim() || "",
       description: data.description?.trim() || "",

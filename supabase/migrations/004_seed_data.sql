@@ -1,14 +1,14 @@
 -- ============================================================
--- iDental — Datos de prueba (solo para desarrollo)
+-- iBarber — Datos de prueba (solo para desarrollo)
 -- ============================================================
 -- Ejecutar SOLO en ambiente local/staging, nunca en producción
 
 -- Servicios de ejemplo para testing de la UI
 -- (Se insertarán al crear un shop via onboarding)
--- Este archivo documenta los servicios típicos de una clínica dental RD
+-- Este archivo documenta los servicios típicos de una barbería RD
 
 /*
-Servicios comunes en clínicas dentales dominicanas:
+Servicios comunes en barberías dominicanas:
 - Corte de cabello: RD$300-500, 30min
 - Corte + barba: RD$500-700, 45min
 - Barba: RD$250-400, 20min

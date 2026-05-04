@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Trash2, Scissors } from "lucide-react";
+import { Plus, Star, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,13 +44,13 @@ export default function StepServices({ data, onUpdate, onNext, onBack }: Props) 
     formState: { errors },
   } = useForm<ServiceForm>({
     resolver: zodResolver(serviceSchema),
-    defaultValues: { duration_min: 30, price: 350 },
+    defaultValues: { duration_min: 45, price: 1800 },
   });
 
   function addService(d: ServiceForm) {
     const updated = [...services, d];
     setServices(updated);
-    reset({ duration_min: 30, price: 350 });
+    reset({ duration_min: 45, price: 1800 });
     setShowForm(false);
   }
 
@@ -69,7 +69,7 @@ export default function StepServices({ data, onUpdate, onNext, onBack }: Props) 
       <CardHeader>
         <div className="flex items-center gap-3 mb-1">
           <div className="bg-primary/10 rounded-xl p-2.5">
-            <Scissors className="h-5 w-5 text-primary" />
+            <Star className="h-5 w-5 text-primary" />
           </div>
           <div>
             <CardTitle>Servicios</CardTitle>

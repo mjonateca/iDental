@@ -1,22 +1,23 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { addDays, format, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
-import { ArrowLeft, CheckCircle2, Clock, Home, Loader2, Scissors, Star, UserRound, Users } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock, Home, Loader2, Star, UserRound } from "lucide-react";
+import Image from "next/image";
+import LogoMark from "@/components/branding/logo-mark";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
-import { formatCurrency, formatTime } from "@/lib/utils";
-import type { Barber, Client, Service, ServiceAddon, Shop } from "@/types/database";
+import { formatCurrency, formatTime, getCurrentDateInTimeZone, getCurrentTimeInTimeZone, parseDateOnly } from "@/lib/utils";
+import { getTimeZoneForCountry } from "@/lib/locations";
+import type { Barber, Client, Service, Shop } from "@/types/database";
 
-type ServiceWithAddons = Service & { service_addons?: ServiceAddon[] };
 interface ShopWithRelations extends Shop {
   barbers: Array<Barber & { barber_services?: Array<{ service_id: string }> }>;
-  services: ServiceWithAddons[];
+  services: Service[];
 }
 
 interface Props {
@@ -29,8 +30,9 @@ type Step = "barber" | "service" | "datetime" | "confirm" | "success";
 type BookedInterval = { start: string; end: string };
 type OpeningHoursValue = Record<string, { open: string; close: string; closed: boolean }>;
 
-function generateDates(days = 14): Date[] {
-  return Array.from({ length: days }, (_, i) => addDays(startOfDay(new Date()), i));
+function generateDates(timeZone: string, days = 14): Date[] {
+  const startDate = startOfDay(parseDateOnly(getCurrentDateInTimeZone(timeZone)));
+  return Array.from({ length: days }, (_, i) => addDays(startDate, i));
 }
 
 function timeToMinutes(value: string) {
@@ -44,6 +46,14 @@ function minutesToTime(total: number) {
     .padStart(2, "0");
   const minutes = (total % 60).toString().padStart(2, "0");
   return `${hours}:${minutes}`;
+}
+
+function ceilToHalfHour(total: number) {
+  return Math.ceil(total / 30) * 30;
+}
+
+function floorToHalfHour(total: number) {
+  return Math.floor(total / 30) * 30;
 }
 
 function intervalsOverlap(start: string, end: string, booked: BookedInterval) {
@@ -92,8 +102,8 @@ function buildSlots(date: Date, openingHours: OpeningHoursValue, duration = 30) 
   const dayConfig = openingHours[weekdayKey(date)];
   if (!dayConfig || dayConfig.closed) return [];
 
-  const start = timeToMinutes(dayConfig.open);
-  const end = timeToMinutes(dayConfig.close);
+  const start = ceilToHalfHour(timeToMinutes(dayConfig.open));
+  const end = floorToHalfHour(timeToMinutes(dayConfig.close));
   const slots: string[] = [];
 
   for (let minute = start; minute + duration <= end; minute += 30) {
@@ -104,18 +114,16 @@ function buildSlots(date: Date, openingHours: OpeningHoursValue, duration = 30) 
 }
 
 export default function BookingFlow({ shop, client, preselectedBarberId }: Props) {
+  const shopTimeZone = useMemo(() => getTimeZoneForCountry(shop.country_code || ""), [shop.country_code]);
   const activeBarbers = shop.barbers.filter((barber) => barber.is_active !== false);
   const openingHours = useMemo(() => normalizeOpeningHours(shop.opening_hours), [shop.opening_hours]);
   const preselectedBarber = preselectedBarberId ? activeBarbers.find((barber) => barber.id === preselectedBarberId) || null : null;
 
   const [step, setStep] = useState<Step>(preselectedBarber ? "service" : "barber");
   const [selectedBarber, setSelectedBarber] = useState<ShopWithRelations["barbers"][number] | null>(preselectedBarber);
-  const [selectedService, setSelectedService] = useState<ServiceWithAddons | null>(null);
-  const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [guestCount, setGuestCount] = useState(1);
-  const [visitNotes, setVisitNotes] = useState("");
   const [bookedSlots, setBookedSlots] = useState<BookedInterval[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -124,17 +132,9 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
   const activeServices = shop.services.filter(
     (service) => service.is_active && service.is_visible !== false && (!selectedBarber || compatibleServiceIds.size === 0 || compatibleServiceIds.has(service.id))
   );
-  const selectedAddons = (selectedService?.service_addons || []).filter((addon) => selectedAddonIds.includes(addon.id));
-  const totalDuration = (selectedService?.duration_min || 0) + selectedAddons.reduce((sum, addon) => sum + Number(addon.duration_min || 0), 0);
-  const totalAmount = (selectedService?.price || 0) + selectedAddons.reduce((sum, addon) => sum + Number(addon.price || 0), 0);
-  const dates = generateDates(14);
-  const availableSlots = selectedDate ? buildSlots(selectedDate, openingHours, totalDuration || 30) : [];
+  const dates = useMemo(() => generateDates(shopTimeZone, 14), [shopTimeZone]);
+  const availableSlots = selectedDate ? buildSlots(selectedDate, openingHours, selectedService?.duration_min || 30) : [];
   const selectedDayConfig = selectedDate ? openingHours[weekdayKey(selectedDate)] : null;
-
-  function toggleAddon(addonId: string) {
-    setSelectedTime(null);
-    setSelectedAddonIds((current) => (current.includes(addonId) ? current.filter((id) => id !== addonId) : [...current, addonId]));
-  }
 
   async function loadBookedSlots(barberId: string, date: Date) {
     setLoadingSlots(true);
@@ -171,7 +171,7 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
 
     const dateStr = format(selectedDate, "yyyy-MM-dd");
     const [hours, minutes] = selectedTime.split(":").map(Number);
-    const endTotal = hours * 60 + minutes + totalDuration;
+    const endTotal = hours * 60 + minutes + selectedService.duration_min;
     const endTime = minutesToTime(endTotal);
 
     try {
@@ -182,12 +182,9 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
           barber_id: selectedBarber.id,
           shop_id: shop.id,
           service_id: selectedService.id,
-          addon_ids: selectedAddonIds,
           date: dateStr,
           start_time: `${selectedTime}:00`,
           end_time: `${endTime}:00`,
-          guest_count: guestCount,
-          notes: visitNotes || null,
         }),
       });
 
@@ -249,9 +246,11 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
     <div className="min-h-screen bg-[hsl(var(--muted))]">
       <header className="relative overflow-hidden bg-[hsl(var(--foreground))] text-white">
         <div
-          className="absolute inset-0 opacity-28"
+          className="absolute inset-0 opacity-30"
           style={{
-            backgroundImage: shop.banner_image_url ? `url('${shop.banner_image_url}')` : shop.banner_image_url ? `url('${shop.banner_image_url}')` : shop.banner_image_url ? `url('${shop.banner_image_url}')` : "url('https://images.unsplash.com/photo-1599351431202-1e0f0137899a?auto=format&fit=crop&w=1200&q=80')",
+            backgroundImage: shop.banner_url
+              ? `url('${shop.banner_url}')`
+              : "url('https://images.unsplash.com/photo-1517832606299-7ae9b720a186?auto=format&fit=crop&w=1200&q=80')",
             backgroundSize: "cover",
             backgroundPosition: "center",
           }}
@@ -265,7 +264,7 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
           <div className="flex-1">
             <p className="text-sm font-semibold">{shop.name}</p>
             <p className="text-xs text-white/70">
-              {step === "barber" && "Elige tu dentista"}
+              {step === "barber" && "Elige tu profesional"}
               {step === "service" && "Elige el servicio"}
               {step === "datetime" && "Elige fecha y hora"}
               {step === "confirm" && "Confirmar reserva"}
@@ -305,7 +304,7 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
             <h2 className="text-lg font-semibold">¿Con quién quieres tu cita?</h2>
             {activeBarbers.length === 0 ? (
               <div className="rounded-lg border bg-background p-4 text-sm text-muted-foreground">
-                Esta clínica dental aún no tiene dentistas activos para recibir reservas.
+                Esta clínica dental aún no tiene profesionales activos para recibir reservas.
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -353,7 +352,7 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
             <div className="space-y-2">
               {activeServices.length === 0 && (
                 <p className="rounded-lg border bg-background p-4 text-sm text-muted-foreground">
-                  Este dentista aún no tiene servicios asignados.
+                  Este profesional aún no tiene servicios asignados.
                 </p>
               )}
               {activeServices.map((service) => (
@@ -361,7 +360,6 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
                   key={service.id}
                   onClick={() => {
                     setSelectedService(service);
-                    setSelectedAddonIds([]);
                     setSelectedTime(null);
                   }}
                   className={`flex w-full items-center justify-between rounded-lg border bg-background p-4 text-left transition-all ${
@@ -382,69 +380,9 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
               ))}
             </div>
             {selectedService && (
-              <div className="space-y-4 rounded-xl border bg-background p-4">
-                <div>
-                  <p className="font-medium">Add-ons opcionales</p>
-                  <p className="text-sm text-muted-foreground">Como en Fresha, puedes aumentar valor y duración antes de confirmar.</p>
-                </div>
-                {selectedService.service_addons?.filter((addon) => addon.is_active !== false).length ? (
-                  <div className="space-y-2">
-                    {selectedService.service_addons
-                      ?.filter((addon) => addon.is_active !== false)
-                      .map((addon) => {
-                        const checked = selectedAddonIds.includes(addon.id);
-                        return (
-                          <button
-                            key={addon.id}
-                            type="button"
-                            onClick={() => toggleAddon(addon.id)}
-                            className={`flex w-full items-center justify-between rounded-lg border p-3 text-left transition-all ${
-                              checked ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "hover:border-primary/40"
-                            }`}
-                          >
-                            <div>
-                              <p className="font-medium">{addon.name}</p>
-                              <p className="text-xs text-muted-foreground">+{addon.duration_min} min</p>
-                            </div>
-                            <p className="font-semibold text-primary">{formatCurrency(addon.price, selectedService.currency)}</p>
-                          </button>
-                        );
-                      })}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Este servicio no tiene add-ons configurados.</p>
-                )}
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="space-y-2 text-sm">
-                    <span className="font-medium">Pacientes / invitados</span>
-                    <select
-                      value={guestCount}
-                      onChange={(event) => setGuestCount(Number(event.target.value))}
-                      className="flex h-11 w-full rounded-xl border border-input bg-background px-4 py-2 text-sm"
-                    >
-                      {Array.from({ length: 6 }, (_, index) => index + 1).map((value) => (
-                        <option key={value} value={value}>
-                          {value}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="space-y-2 text-sm">
-                    <span className="font-medium">Notas para la clínica dental</span>
-                    <textarea
-                      value={visitNotes}
-                      onChange={(event) => setVisitNotes(event.target.value)}
-                      placeholder="Motivo de consulta, preferencia o comentario relevante."
-                      className="min-h-[88px] w-full rounded-xl border border-input bg-background px-4 py-3 text-sm"
-                    />
-                  </label>
-                </div>
-
-                <Button className="w-full" onClick={() => setStep("datetime")}>
-                  Elegir fecha y hora
-                </Button>
-              </div>
+              <Button className="w-full" onClick={() => setStep("datetime")}>
+                Elegir fecha y hora
+              </Button>
             )}
           </div>
         )}
@@ -499,11 +437,12 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
                 ) : (
                   <div className="grid grid-cols-4 gap-2">
                     {availableSlots.map((slot) => {
-                      const duration = totalDuration || 30;
+                      const duration = selectedService?.duration_min || 30;
                       const slotEnd = minutesToTime(timeToMinutes(slot) + duration);
                       const dateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
-                      const todayStr = format(new Date(), "yyyy-MM-dd");
-                      const inPast = dateStr === todayStr && timeToMinutes(slot) <= timeToMinutes(format(new Date(), "HH:mm"));
+                      const todayStr = getCurrentDateInTimeZone(shopTimeZone);
+                      const currentTime = getCurrentTimeInTimeZone(shopTimeZone);
+                      const inPast = dateStr === todayStr && timeToMinutes(slot) <= timeToMinutes(currentTime);
                       const taken = inPast || bookedSlots.some((booked) => intervalsOverlap(slot, slotEnd, booked));
 
                       return (
@@ -545,7 +484,7 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
               <CardContent className="space-y-4 p-5">
                 <div className="flex items-center gap-3 border-b pb-4">
                   <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <Scissors className="h-5 w-5" />
+                    <LogoMark className="h-5 w-5" />
                   </div>
                   <div>
                     <p className="font-semibold">{shop.name}</p>
@@ -553,19 +492,13 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
                   </div>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Dentista</span>
+                  <span className="text-muted-foreground">Profesional</span>
                   <span className="font-medium">{selectedBarber?.display_name}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Servicio</span>
                   <span className="font-medium">{selectedService?.name}</span>
                 </div>
-                {selectedAddons.length > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Add-ons</span>
-                    <span className="font-medium text-right">{selectedAddons.map((addon) => addon.name).join(", ")}</span>
-                  </div>
-                )}
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Fecha</span>
                   <span className="font-medium">{selectedDate && format(selectedDate, "EEEE d 'de' MMMM", { locale: es })}</span>
@@ -576,25 +509,12 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Duración</span>
-                  <span className="font-medium">{totalDuration} min</span>
+                  <span className="font-medium">{selectedService?.duration_min} min</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    <Users className="h-3.5 w-3.5" />
-                    Pacientes
-                  </span>
-                  <span className="font-medium">{guestCount}</span>
-                </div>
-                {visitNotes && (
-                  <div className="space-y-1 border-t pt-3 text-sm">
-                    <span className="text-muted-foreground">Notas</span>
-                    <p className="font-medium">{visitNotes}</p>
-                  </div>
-                )}
                 <div className="flex justify-between border-t pt-3">
                   <span className="font-semibold">Total</span>
                   <span className="text-lg font-bold text-primary">
-                    {selectedService && formatCurrency(totalAmount, selectedService.currency)}
+                    {selectedService && formatCurrency(selectedService.price, selectedService.currency)}
                   </span>
                 </div>
                 {shop.payments_enabled && (

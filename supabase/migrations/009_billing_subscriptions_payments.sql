@@ -1,5 +1,5 @@
 -- ============================================================
--- iDental — Suscripciones de clínicas dentales y pagos online
+-- iBarber — Suscripciones de barberías y pagos online
 -- ============================================================
 
 do $$

@@ -5,8 +5,8 @@
 iDental es una webapp de reservas para clínicas dentales pequeñas y medianas, pensada para tres tipos de usuario:
 
 - `client`: la persona que busca clínicas dentales, reserva citas, guarda favoritos y deja reseñas.
-- `barber`: el dentista que gestiona su agenda, ve sus clientes y mantiene su perfil profesional.
-- `shop_owner` / clínica dental: el dueño o administrador de la clínica dental que gestiona operación, servicios, dentistas y reservas.
+- `barber`: el profesional que gestiona su agenda, ve sus clientes y mantiene su perfil profesional.
+- `shop_owner` / clínica dental: el dueño o administrador de la clínica dental que gestiona operación, servicios, profesionales y reservas.
 
 El producto está construido con:
 
@@ -26,8 +26,8 @@ La idea central de iDental es cubrir el flujo completo de una clínica dental mo
 1. Descubrimiento público de clínicas dentales por ubicación.
 2. Registro y autenticación por rol.
 3. Reserva online con validaciones reales de disponibilidad.
-4. Panel diferenciado para cliente, dentista y clínica dental.
-5. Gestión operativa de servicios, dentistas, reservas y clientes.
+4. Panel diferenciado para cliente, profesional y clínica dental.
+5. Gestión operativa de servicios, profesionales, reservas y clientes.
 6. Base preparada para recordatorios, reprogramaciones y notificaciones tipo WhatsApp.
 
 En otras palabras, iDental no es solo “una landing con formulario”; es una plataforma con catálogo público, sistema de cuentas, reservas y operación interna.
@@ -44,7 +44,7 @@ La parte pública permite:
 - filtrar clínicas dentales por país y ciudad
 - abrir la página pública de cada clínica dental
 - ver servicios activos
-- ver dentistas activos
+- ver profesionales activos
 - iniciar una reserva desde la ficha pública
 
 ### 2. Capa autenticada
@@ -62,7 +62,7 @@ La base de datos separa claramente:
 - `auth.users`: identidad autenticada
 - `profiles`: rol y ubicación base del usuario
 - `clients`: perfil de cliente
-- `barbers`: perfil de dentista
+- `barbers`: perfil de profesional
 - `shops`: clínicas dentales
 - `services`: catálogo de servicios
 - `bookings`: reservas
@@ -99,17 +99,17 @@ La página pública muestra:
 - dirección, si existe
 - teléfono, si existe
 - descripción, si existe
-- lista de dentistas activos
-- especialidad y rating del dentista, si existen
+- lista de profesionales activos
+- especialidad y rating del profesional, si existen
 - lista de servicios activos y visibles
 - duración y precio de cada servicio
 - CTA para reservar
 
 También permite:
 
-- seleccionar un dentista concreto antes de reservar
-- filtrar los servicios visibles según los servicios asignados a ese dentista
-- advertir si el usuario está viendo la clínica dental con una cuenta de dentista o clínica dental, porque para reservar se requiere cuenta `client`
+- seleccionar un profesional concreto antes de reservar
+- filtrar los servicios visibles según los servicios asignados a ese profesional
+- advertir si el usuario está viendo la clínica dental con una cuenta de profesional o clínica dental, porque para reservar se requiere cuenta `client`
 - mostrar un aviso de depósito si la clínica dental exige depósito y tiene monto configurado
 
 ---
@@ -196,12 +196,12 @@ El cliente es la cara de consumo del producto.
 - ver clínicas dentales públicas
 - filtrar clínicas dentales por ubicación
 - abrir la ficha pública de una clínica dental
-- seleccionar dentista
+- seleccionar profesional
 - seleccionar servicio
 - elegir fecha y hora
 - crear una reserva
 - guardar clínicas dentales favoritas
-- guardar dentistas favoritos
+- guardar profesionales favoritos
 - ver sus reservas
 - ver estado de sus reservas
 - dejar reseñas sobre citas completadas
@@ -215,7 +215,7 @@ El dashboard del cliente muestra:
 - métricas simples:
   - cantidad de reservas
   - clínicas dentales favoritas
-  - dentistas favoritos
+  - profesionales favoritos
 - clínicas dentales activas relevantes para su zona
 - acciones rápidas para:
   - reservar
@@ -244,16 +244,16 @@ Para el cliente, iDental funciona como:
 
 ---
 
-## 2. Dentista
+## 2. Profesional
 
-El dentista es un profesional dentro o fuera de una clínica dental.
+El profesional es un profesional dentro o fuera de una clínica dental.
 
 ### Qué puede hacer hoy
 
-- registrarse como dentista
+- registrarse como profesional
 - iniciar sesión
 - quedar vinculado a una clínica dental por `shop_slug` si se indicó al registrarse
-- existir como dentista independiente si no se vinculó a un shop
+- existir como profesional independiente si no se vinculó a un shop
 - ver su dashboard
 - ver su agenda de hoy
 - ver próximos turnos
@@ -261,9 +261,9 @@ El dentista es un profesional dentro o fuera de una clínica dental.
 - ver servicios asignados
 - editar su perfil profesional
 
-### Qué muestra el dashboard del dentista
+### Qué muestra el dashboard del profesional
 
-El dashboard del dentista se orienta a operación diaria:
+El dashboard del profesional se orienta a operación diaria:
 
 - turnos de hoy
 - próximos turnos
@@ -272,9 +272,9 @@ El dashboard del dentista se orienta a operación diaria:
 - ingresos esperados del día
 - servicios que ofrece
 
-### Perfil del dentista
+### Perfil del profesional
 
-El dentista tiene atributos preparados para:
+El profesional tiene atributos preparados para:
 
 - nombre visible
 - avatar
@@ -293,9 +293,9 @@ Hoy, desde la lógica existente:
 - puede ver las reservas donde participa
 - puede ver clientes que ya reservaron con él
 
-### Valor del producto para el dentista
+### Valor del producto para el profesional
 
-Para el dentista, iDental funciona como:
+Para el profesional, iDental funciona como:
 
 - agenda profesional
 - ficha de presentación
@@ -320,10 +320,10 @@ La clínica dental es el rol más completo en términos operativos.
 - crear servicios
 - editar servicios
 - desactivar servicios
-- crear dentistas
-- editar dentistas
-- desactivar dentistas
-- asignar servicios a dentistas
+- crear profesionales
+- editar profesionales
+- desactivar profesionales
+- asignar servicios a profesionales
 - ver clientes de sus reservas
 - reprogramar o cambiar estado de bookings
 - ver eventos/notificaciones del negocio
@@ -339,7 +339,7 @@ El dashboard de clínica dental incluye:
 - ingresos esperados de la semana
 - lista de reservas del día
 - catálogo de servicios
-- equipo de dentistas
+- equipo de profesionales
 - lista de clientes relacionados con reservas
 - notificaciones / eventos recientes
 
@@ -362,9 +362,9 @@ Esto permite diferenciar:
 - servicios visibles para el público
 - servicios internos o desactivados
 
-### Gestión de dentistas
+### Gestión de profesionales
 
-La clínica dental puede gestionar dentistas con:
+La clínica dental puede gestionar profesionales con:
 
 - nombre visible
 - bio
@@ -380,7 +380,7 @@ La clínica dental puede:
 - ver reservas del shop
 - filtrar por fecha
 - filtrar por estado
-- filtrar por dentista
+- filtrar por profesional
 - cambiar estado de la reserva
 - reprogramar fecha y hora
 - detectar conflictos antes de mover una cita
@@ -392,7 +392,7 @@ Existe un onboarding para cuentas `shop_owner` sin clínica dental operativa.
 El flujo está pensado para:
 
 - completar o corregir la información del negocio
-- añadir dentistas iniciales
+- añadir profesionales iniciales
 - dejar lista la clínica dental para comenzar a recibir reservas
 
 ### Valor del producto para la clínica dental
@@ -416,7 +416,7 @@ La reserva es el núcleo funcional del producto.
 El flujo actual es:
 
 1. cliente entra a la clínica dental pública
-2. elige dentista
+2. elige profesional
 3. elige servicio
 4. elige fecha
 5. elige hora
@@ -431,11 +431,11 @@ El backend valida:
 - que el rol sea `client`
 - que exista el perfil `client`
 - que la clínica dental esté activa
-- que el dentista esté activo
-- que el dentista pertenezca a esa clínica dental
+- que el profesional esté activo
+- que el profesional pertenezca a esa clínica dental
 - que el servicio esté activo y visible
 - que el servicio pertenezca a esa clínica dental
-- que el dentista realmente ofrezca ese servicio si tiene asignaciones explícitas
+- que el profesional realmente ofrezca ese servicio si tiene asignaciones explícitas
 - que la hora de fin sea posterior a la de inicio
 - que no exista solape con otra reserva
 
@@ -444,7 +444,7 @@ El backend valida:
 La disponibilidad pública usa:
 
 - reservas ya creadas
-- bloqueos manuales del dentista (`barber_time_blocks`)
+- bloqueos manuales del profesional (`barber_time_blocks`)
 
 El endpoint devuelve intervalos ocupados.
 
@@ -486,12 +486,12 @@ El modelo ya soporta:
 El cliente puede marcar:
 
 - clínicas dentales favoritas
-- dentistas favoritos
+- profesionales favoritos
 
 Eso sirve para:
 
 - personalizar su dashboard
-- volver rápido a una clínica dental o dentista preferido
+- volver rápido a una clínica dental o profesional preferido
 
 ## Reseñas
 
@@ -501,15 +501,15 @@ Cada reseña:
 
 - pertenece a un booking
 - pertenece a un cliente
-- pertenece a un dentista
+- pertenece a un profesional
 - tiene rating de 1 a 5
 - puede incluir comentario
 
 Cuando una reseña se crea:
 
-- el sistema recalcula el rating promedio del dentista
+- el sistema recalcula el rating promedio del profesional
 
-Esto convierte la reputación del dentista en una métrica viva y no solo decorativa.
+Esto convierte la reputación del profesional en una métrica viva y no solo decorativa.
 
 ---
 
@@ -618,11 +618,11 @@ Uno de los puntos fuertes del proyecto es que no mezcla todos los roles.
 
 Hay políticas específicas para:
 
-- lectura pública de clínicas dentales, dentistas, servicios y reviews
+- lectura pública de clínicas dentales, profesionales, servicios y reviews
 - lectura/escritura del propio cliente
-- lectura/escritura del propio dentista
+- lectura/escritura del propio profesional
 - gestión del dueño del shop sobre su clínica dental
-- reservas según cliente, dentista o owner
+- reservas según cliente, profesional o owner
 - favoritos del propio cliente
 - reviews del cliente correcto
 
@@ -630,7 +630,7 @@ Hay políticas específicas para:
 
 - el cliente no puede gestionar clínicas dentales
 - la clínica dental no puede reservar como cliente
-- el dentista no puede hacerse pasar por cliente al reservar
+- el profesional no puede hacerse pasar por cliente al reservar
 - cada actor ve lo que le toca según ownership y rol
 
 Esto reduce muchísimo la mezcla de contextos y errores de autorización.
@@ -672,9 +672,9 @@ Esto sí está implementado y visible en la app:
 - reseñas
 - onboarding de clínica dental
 - CRUD de servicios
-- CRUD de dentistas
+- CRUD de profesionales
 - actualización de reservas por el dueño
-- perfil del dentista
+- perfil del profesional
 - cálculo de rating por reseñas
 - autocorrección de cuentas legacy
 
@@ -706,7 +706,7 @@ iDental es una plataforma de reservas para clínicas dentales con tres vistas de
 
 - una vista pública para descubrimiento y conversión
 - una vista de cliente para reservar y fidelizar
-- una vista de dentista para ejecutar el servicio
+- una vista de profesional para ejecutar el servicio
 - una vista de clínica dental para operar el negocio
 
 No está planteado como un simple directorio. Está pensado como un sistema operativo ligero para clínicas dentales:

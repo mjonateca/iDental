@@ -18,10 +18,11 @@ export interface OnboardingData {
   countryCode: string;
   countryName: string;
   city: string;
+  currency: string;
   description: string;
   // Paso 2
   services: Array<{ name: string; duration_min: number; price: number }>;
-  // Paso 3 — dentista principal (el dueño)
+  // Paso 3 — profesional principal (el dueño)
   barberName: string;
   barberBio: string;
 }
@@ -29,7 +30,7 @@ export interface OnboardingData {
 const STEPS = [
   { label: "Tu clínica dental", description: "Información básica" },
   { label: "Servicios",   description: "Qué ofreces" },
-  { label: "Tu perfil",  description: "Perfil de dentista" },
+  { label: "Tu perfil",  description: "Perfil profesional" },
 ];
 
 export default function OnboardingWizard({ userId }: { userId: string }) {

@@ -35,7 +35,7 @@ export async function POST(
       payment_currency,
       payment_required,
       services(name, price, currency),
-      shops(name, payments_enabled, online_payment_mode)
+      shops(name, payments_enabled, online_payment_mode, currency)
     `)
     .eq("id", id)
     .maybeSingle();
@@ -55,7 +55,7 @@ export async function POST(
 
   const service = Array.isArray(booking.services) ? booking.services[0] : booking.services;
   const amount = Number(booking.payment_amount || service?.price || 0);
-  const currency = String(booking.payment_currency || service?.currency || "DOP");
+  const currency = String(booking.payment_currency || service?.currency || bookingShop?.currency || "USD");
   const customerId = await ensureClientStripeCustomer(context.account.client, context.user.email);
 
   const existingPayment = await admin

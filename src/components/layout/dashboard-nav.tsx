@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Bell, Calendar, LayoutDashboard, LogOut, Scissors, Settings, UserRound, Users } from "lucide-react";
+import { Bell, Calendar, LayoutDashboard, LogOut, Settings, Star, UserRound, Users } from "lucide-react";
 import LogoMark from "@/components/branding/logo-mark";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -17,11 +17,11 @@ type NavItem = {
 const shopNavItems: NavItem[] = [
   { tab: "summary", label: "Resumen", icon: LayoutDashboard },
   { tab: "bookings", label: "Reservas", icon: Calendar },
-  { tab: "services", label: "Servicios", icon: Scissors },
-  { tab: "barbers", label: "Dentistas", icon: UserRound },
+  { tab: "services", label: "Servicios", icon: Star },
+  { tab: "barbers", label: "Profesionales", icon: UserRound },
   { tab: "clients", label: "Clientes", icon: Users },
   { tab: "schedule", label: "Horarios", icon: Calendar },
-  { tab: "email", label: "Emails", icon: Bell },
+  { tab: "notifications", label: "Avisos", icon: Bell },
   { tab: "settings", label: "Ajustes", icon: Settings },
 ];
 
@@ -73,8 +73,8 @@ export default function DashboardNav({ role = "shop_owner" }: { role?: AccountRo
         </div>
 
         <div className="mx-4 mt-4 rounded-2xl border border-sky-100 bg-white/70 p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">Navegacion</p>
-          <p className="mt-1 text-sm text-muted-foreground">Clinica, agenda, equipo y caja en un solo lugar.</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">Navegación</p>
+          <p className="mt-1 text-sm text-muted-foreground">Clínica, agenda, equipo y cobros en un solo lugar.</p>
         </div>
 
         <nav className="flex-1 space-y-1 p-4">

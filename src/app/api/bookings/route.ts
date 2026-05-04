@@ -8,12 +8,14 @@ const createBookingSchema = z.object({
   barber_id: z.string().uuid(),
   shop_id: z.string().uuid(),
   service_id: z.string().uuid(),
-  addon_ids: z.array(z.string().uuid()).optional().default([]),
+  client_id: z.string().uuid().optional(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   start_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/),
   end_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/),
-  guest_count: z.coerce.number().int().min(1).max(8).optional().default(1),
-  notes: z.string().trim().max(500).optional().nullable(),
+  manual: z.boolean().optional(),
+  client_name: z.string().optional(),
+  client_phone: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 type OpeningHoursValue = Record<string, { open: string; close: string; closed: boolean }>;
@@ -21,6 +23,13 @@ type OpeningHoursValue = Record<string, { open: string; close: string; closed: b
 function timeToMinutes(value: string) {
   const [hours, minutes] = value.split(":").map(Number);
   return hours * 60 + minutes;
+}
+
+function addMinutesToTime(value: string, minutesToAdd: number) {
+  const total = timeToMinutes(value) + minutesToAdd;
+  const hours = Math.floor(total / 60);
+  const minutes = total % 60;
+  return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:00`;
 }
 
 function weekdayKey(value: string) {
@@ -39,17 +48,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
+  const rawBody = await request.json();
+  const isManual = rawBody.manual === true;
+
   const account = await ensureAccountRecords(user);
-  if (account.role !== "client") {
+  if (!isManual && account.role !== "client") {
     return NextResponse.json({ error: "Solo una cuenta cliente puede crear reservas" }, { status: 403 });
   }
 
+  if (isManual && !["shop_owner", "barber"].includes(account.role)) {
+    return NextResponse.json({ error: "Solo la clínica dental o un profesional pueden crear reservas manuales" }, { status: 403 });
+  }
+
   const client = account.client;
-  if (!client) {
+  if (!isManual && !client) {
     return NextResponse.json({ error: "Perfil de cliente no encontrado" }, { status: 404 });
   }
 
-  const parsed = createBookingSchema.safeParse(await request.json());
+  const parsed = createBookingSchema.safeParse(rawBody);
   if (!parsed.success) {
     return NextResponse.json({ error: "Datos inválidos", details: parsed.error.flatten() }, { status: 400 });
   }
@@ -57,10 +73,10 @@ export async function POST(request: Request) {
   const [{ data: shop }, { data: barber }, { data: service }, { data: subscription }] = await Promise.all([
     admin
       .from("shops")
-      .select("id, is_active, opening_hours, payments_enabled, online_payment_mode, deposit_required, deposit_amount")
+      .select("id, owner_id, is_active, opening_hours, payments_enabled, online_payment_mode, deposit_required, deposit_amount, currency")
       .eq("id", parsed.data.shop_id)
       .maybeSingle(),
-    admin.from("barbers").select("id, shop_id, is_active").eq("id", parsed.data.barber_id).maybeSingle(),
+    admin.from("barbers").select("id, user_id, shop_id, is_active").eq("id", parsed.data.barber_id).maybeSingle(),
     admin.from("services").select("id, shop_id, is_active, is_visible, price, currency, duration_min").eq("id", parsed.data.service_id).maybeSingle(),
     admin.from("shop_subscriptions").select("status, current_period_end").eq("shop_id", parsed.data.shop_id).maybeSingle(),
   ]);
@@ -77,11 +93,27 @@ export async function POST(request: Request) {
   }
 
   if (!barber?.is_active || barber.shop_id !== parsed.data.shop_id) {
-    return NextResponse.json({ error: "Dentista no disponible en esta clínica dental" }, { status: 409 });
+    return NextResponse.json({ error: "Profesional no disponible en esta clínica dental" }, { status: 409 });
   }
 
   if (!service?.is_active || service.is_visible === false || service.shop_id !== parsed.data.shop_id) {
     return NextResponse.json({ error: "Servicio no disponible en esta clínica dental" }, { status: 409 });
+  }
+
+  if (isManual) {
+    const ownsShop = account.role === "shop_owner" && shop.owner_id === user.id;
+    const ownsBarberAgenda = account.role === "barber" && barber?.user_id === user.id;
+    if (!ownsShop && !ownsBarberAgenda) {
+      return NextResponse.json({ error: "No autorizado para crear reservas en esta agenda" }, { status: 403 });
+    }
+  }
+
+  const selectedManualClient = isManual && parsed.data.client_id
+    ? await admin.from("clients").select("id, name, phone").eq("id", parsed.data.client_id).maybeSingle()
+    : { data: null };
+
+  if (isManual && parsed.data.client_id && !selectedManualClient.data) {
+    return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
   }
 
   const { data: assignedServices } = await admin
@@ -92,36 +124,10 @@ export async function POST(request: Request) {
   const hasExplicitAssignments = Boolean(assignedServices?.length);
   const compatible = !hasExplicitAssignments || assignedServices?.some((item) => item.service_id === parsed.data.service_id);
   if (!compatible) {
-    return NextResponse.json({ error: "El dentista seleccionado no ofrece ese servicio" }, { status: 409 });
+    return NextResponse.json({ error: "El profesional seleccionado no ofrece ese servicio" }, { status: 409 });
   }
 
-  const addonIds = [...new Set(parsed.data.addon_ids || [])];
-  const { data: addonsRaw, error: addonsError } = addonIds.length
-    ? await admin
-        .from("service_addons")
-        .select("id, service_id, name, price, duration_min, is_active")
-        .in("id", addonIds)
-    : { data: [], error: null };
-
-  if (addonsError) {
-    return NextResponse.json({ error: addonsError.message }, { status: 500 });
-  }
-
-  const addons = (addonsRaw || []).filter((addon) => addon.is_active !== false);
-  if (addons.length !== addonIds.length || addons.some((addon) => addon.service_id !== parsed.data.service_id)) {
-    return NextResponse.json({ error: "Hay add-ons inválidos para este servicio" }, { status: 409 });
-  }
-
-  if (timeToMinutes(parsed.data.end_time) <= timeToMinutes(parsed.data.start_time)) {
-    return NextResponse.json({ error: "Horario inválido" }, { status: 400 });
-  }
-
-  const expectedDuration =
-    Number(service.duration_min || 0) + addons.reduce((sum, addon) => sum + Number(addon.duration_min || 0), 0);
-  const requestedDuration = timeToMinutes(parsed.data.end_time) - timeToMinutes(parsed.data.start_time);
-  if (requestedDuration !== expectedDuration) {
-    return NextResponse.json({ error: "La duración elegida no coincide con el servicio y add-ons seleccionados" }, { status: 409 });
-  }
+  const normalizedEndTime = addMinutesToTime(parsed.data.start_time, Number(service.duration_min || 0));
 
   const openingHours = (shop.opening_hours || {}) as OpeningHoursValue;
   const daySchedule = openingHours[weekdayKey(parsed.data.date)];
@@ -132,7 +138,7 @@ export async function POST(request: Request) {
   if (
     daySchedule &&
     (timeToMinutes(parsed.data.start_time.slice(0, 5)) < timeToMinutes(daySchedule.open) ||
-      timeToMinutes(parsed.data.end_time.slice(0, 5)) > timeToMinutes(daySchedule.close))
+      timeToMinutes(normalizedEndTime.slice(0, 5)) > timeToMinutes(daySchedule.close))
   ) {
     return NextResponse.json({ error: "La hora elegida está fuera del horario de la clínica dental" }, { status: 409 });
   }
@@ -143,7 +149,7 @@ export async function POST(request: Request) {
     .eq("barber_id", parsed.data.barber_id)
     .eq("date", parsed.data.date)
     .not("status", "in", '("cancelled","no_show")')
-    .or(`and(start_time.lt.${parsed.data.end_time},end_time.gt.${parsed.data.start_time})`)
+    .or(`and(start_time.lt.${normalizedEndTime},end_time.gt.${parsed.data.start_time})`)
     .limit(1)
     .maybeSingle();
 
@@ -151,31 +157,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "El horario ya no está disponible" }, { status: 409 });
   }
 
-  const addonsTotal = addons.reduce((sum, addon) => sum + Number(addon.price || 0), 0);
-  const baseAmount = Number(service.price || 0) + addonsTotal;
-  const paymentAmount = Number(shop.deposit_required && Number(shop.deposit_amount) > 0 ? shop.deposit_amount : baseAmount);
+  const paymentAmount = Number(shop.deposit_required && Number(shop.deposit_amount) > 0 ? shop.deposit_amount : service.price || 0);
   const paymentRequired = Boolean(shop.payments_enabled && shop.online_payment_mode === "required");
+  const bookingPayload = {
+    barber_id: parsed.data.barber_id,
+    shop_id: parsed.data.shop_id,
+    service_id: parsed.data.service_id,
+    date: parsed.data.date,
+    start_time: parsed.data.start_time,
+  };
 
   const { data: booking, error } = await admin
     .from("bookings")
     .insert({
-      client_id: client.id,
-      barber_id: parsed.data.barber_id,
-      shop_id: parsed.data.shop_id,
-      service_id: parsed.data.service_id,
-      date: parsed.data.date,
-      start_time: parsed.data.start_time,
-      end_time: parsed.data.end_time,
+      client_id: isManual ? selectedManualClient.data?.id || null : client!.id,
+      client_name: isManual && !selectedManualClient.data ? (parsed.data.client_name ?? null) : null,
+      client_phone: isManual && !selectedManualClient.data ? (parsed.data.client_phone ?? null) : null,
+      notes: parsed.data.notes ?? null,
+      ...bookingPayload,
+      end_time: normalizedEndTime,
       status: "confirmed",
       deposit_status: "none",
       deposit_amount: 0,
       payment_status: "pending",
       payment_required: paymentRequired,
-      base_amount: baseAmount,
       payment_amount: paymentAmount,
-      payment_currency: service.currency || "DOP",
-      guest_count: parsed.data.guest_count,
-      notes: parsed.data.notes || null,
+      payment_currency: service.currency || shop.currency || "USD",
     })
     .select()
     .single();
@@ -183,22 +190,6 @@ export async function POST(request: Request) {
   if (error) {
     const message = error.message.includes("no_overlap") ? "El horario ya no está disponible" : error.message;
     return NextResponse.json({ error: message }, { status: 500 });
-  }
-
-  if (addons.length) {
-    const { error: bookingAddonsError } = await admin.from("booking_addons").insert(
-      addons.map((addon) => ({
-        booking_id: booking.id,
-        addon_id: addon.id,
-        name_snapshot: addon.name,
-        price_snapshot: addon.price,
-        duration_snapshot: addon.duration_min,
-      }))
-    );
-
-    if (bookingAddonsError) {
-      return NextResponse.json({ error: bookingAddonsError.message }, { status: 500 });
-    }
   }
 
   return NextResponse.json(booking, { status: 201 });

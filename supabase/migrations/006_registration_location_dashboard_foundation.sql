@@ -1,5 +1,5 @@
 -- ============================================================
--- iDental — Registro por rol, catálogo por ubicación y panel
+-- iBarber — Registro por rol, catálogo por ubicación y panel
 -- ============================================================
 
 do $$
@@ -252,7 +252,7 @@ begin
     )
     values (
       new.id,
-      coalesce(nullif(metadata->>'business_name', ''), 'Clínica dental'),
+      coalesce(nullif(metadata->>'business_name', ''), 'Barbería'),
       target_slug,
       nullif(metadata->>'address', ''),
       nullif(metadata->>'phone', ''),

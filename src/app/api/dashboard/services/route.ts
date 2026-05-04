@@ -20,7 +20,7 @@ export async function GET(request: Request) {
 
   const { data, error } = await context.supabase
     .from("services")
-    .select("*, service_addons(*)")
+    .select("*")
     .eq("shop_id", context.shop.id)
     .order("sort_order")
     .order("name");
@@ -39,6 +39,14 @@ export async function POST(request: Request) {
   const context = await requireOwnedActiveShop(parsed.data.shop_id);
   if (context.response) return context.response;
 
+  const { data: shop } = await context.supabase
+    .from("shops")
+    .select("currency")
+    .eq("id", context.shop.id)
+    .maybeSingle();
+
+  const serviceCurrency = shop?.currency || "USD";
+
   let { data, error } = await context.supabase
     .from("services")
     .insert({
@@ -46,7 +54,7 @@ export async function POST(request: Request) {
       name: parsed.data.name,
       duration_min: parsed.data.duration_min,
       price: parsed.data.price,
-      currency: "DOP",
+      currency: serviceCurrency,
       description: parsed.data.description || null,
       category: parsed.data.category || null,
       is_visible: parsed.data.is_visible ?? true,
@@ -63,7 +71,7 @@ export async function POST(request: Request) {
         name: parsed.data.name,
         duration_min: parsed.data.duration_min,
         price: parsed.data.price,
-        currency: "DOP",
+        currency: serviceCurrency,
       })
       .select()
       .single();

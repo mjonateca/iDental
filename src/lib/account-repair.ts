@@ -1,4 +1,5 @@
 import type { User } from "@supabase/supabase-js";
+import { getCitiesForCountry, getCountryName } from "./locations";
 import type { AccountRole, Client, Profile } from "../types/database";
 
 type Metadata = Record<string, unknown> | null | undefined;
@@ -138,14 +139,19 @@ export function buildAccountSeed(input: SeedInput) {
       ? pickString(existingProfile?.business_name, readString(input.metadata, "business_name"), fullName, "Clínica dental")
       : null;
   const phone = pickString(existingProfile?.phone, existingClient?.phone, readString(input.metadata, "phone"));
-  const countryCode = (pickString(existingProfile?.country_code, existingClient?.country_code, readString(input.metadata, "country_code")) || "DO").toUpperCase();
+  const countryCode = (pickString(existingProfile?.country_code, existingClient?.country_code, readString(input.metadata, "country_code")) || "US").toUpperCase();
   const countryName = pickString(
     existingProfile?.country_name,
     existingClient?.country_name,
     readString(input.metadata, "country_name"),
-    countryCode === "DO" ? "República Dominicana" : null
-  ) || "República Dominicana";
-  const city = pickString(existingProfile?.city, existingClient?.city, readString(input.metadata, "city"), "Santo Domingo") || "Santo Domingo";
+    getCountryName(countryCode)
+  ) || getCountryName(countryCode);
+  const city = pickString(
+    existingProfile?.city,
+    existingClient?.city,
+    readString(input.metadata, "city"),
+    getCitiesForCountry(countryCode)[0] || null
+  ) || "New York";
   const clientName = pickString(
     existingClient?.name,
     [firstName, lastName].filter(Boolean).join(" "),

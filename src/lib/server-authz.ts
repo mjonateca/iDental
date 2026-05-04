@@ -28,7 +28,7 @@ export async function requireOwnedShop(shopId?: string | null) {
 
   let query = context.supabase
     .from("shops")
-    .select("id, owner_id")
+    .select("id, owner_id, name, slug, reminder_channels, reminder_lead_minutes")
     .eq("owner_id", context.user.id);
 
   if (shopId) query = query.eq("id", shopId);
