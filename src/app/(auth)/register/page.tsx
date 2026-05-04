@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { COUNTRIES, getCitiesForCountry } from "@/lib/locations";
+import { COUNTRIES, getCurrencyForCountry, getCitiesForCountry } from "@/lib/locations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +25,7 @@ const registerSchema = z.object({
   email: z.string().email("Correo inválido"),
   phone: z.string().min(7, "Teléfono requerido"),
   countryCode: z.string().min(2, "País requerido"),
+  currency: z.string().default("USD"),
   city: z.string().min(2, "Ciudad requerida"),
   address: z.string().optional(),
   description: z.string().optional(),
@@ -60,8 +61,8 @@ export default function RegisterPage() {
     resolver: zodResolver(registerSchema),
     defaultValues: {
       accountType: "client",
-      countryCode: "DO",
-      city: "Santo Domingo",
+      countryCode: "",
+      city: "",
     },
   });
 
@@ -95,6 +96,7 @@ export default function RegisterPage() {
           email: data.email,
           phone: data.phone,
           countryCode: data.countryCode,
+        currency: getCurrencyForCountry(data.countryCode).currency,
           city: data.city,
           address: data.address || "",
           description: data.description || "",
@@ -168,7 +170,7 @@ export default function RegisterPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="specialty">Especialidad</Label>
-                <Input id="specialty" placeholder="Ortodoncia, estética, implantología..." {...register("specialty")} />
+                <Input id="specialty" placeholder="Fade, valoración, diseño..." {...register("specialty")} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="shopSlug">Clínica dental donde trabajas</Label>
@@ -223,6 +225,7 @@ export default function RegisterPage() {
                   },
                 })}
               >
+                <option value="">Selecciona un país</option>
                 {COUNTRIES.map((country) => (
                   <option key={country.code} value={country.code}>
                     {country.name}
@@ -236,8 +239,10 @@ export default function RegisterPage() {
               <select
                 id="city"
                 className="flex h-11 w-full rounded-xl border border-input bg-background px-4 py-2 text-sm"
+                disabled={!countryCode}
                 {...register("city")}
               >
+                <option value="">{countryCode ? "Selecciona una ciudad" : "Selecciona un país primero"}</option>
                 {cities.map((city) => (
                   <option key={city} value={city}>
                     {city}
@@ -296,7 +301,7 @@ export default function RegisterPage() {
             ) : accountType === "barbershop" ? (
               "Registrar clínica dental"
             ) : accountType === "barber" ? (
-              "Crear cuenta profesional"
+              "Crear cuenta de profesional"
             ) : (
               "Crear cuenta"
             )}

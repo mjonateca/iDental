@@ -51,8 +51,8 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
     // Modo demo: simular guardado y redirigir
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith("http")) {
       await new Promise((r) => setTimeout(r, 800));
-      toast({ title: "¡Clínica dental creada! (demo)", description: buildAppUrl("/barber-king") + " ya está lista" });
-      onComplete("barber-king");
+      toast({ title: "¡Clínica dental creada! (demo)", description: buildAppUrl("/sonrisa-clara") + " ya está lista" });
+      onComplete("sonrisa-clara");
       return;
     }
 
@@ -216,7 +216,7 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
             <Label htmlFor="barberName">Tu nombre como profesional *</Label>
             <Input
               id="barberName"
-              placeholder="Ej: Juan el Maestro"
+              placeholder="Ej: Dra. Laura Gómez"
               {...register("barberName")}
             />
             {errors.barberName && (
@@ -232,7 +232,7 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
             <textarea
               id="barberBio"
               className="flex min-h-[80px] w-full rounded-xl border border-input bg-background px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
-              placeholder="10 años de experiencia, especialista en cortes clásicos..."
+              placeholder="10 años de experiencia, especialista en tratamientos clásicos..."
               maxLength={200}
               {...register("barberBio")}
             />

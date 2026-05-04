@@ -7,8 +7,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     <div className="min-h-screen bg-background flex flex-col">
       <header className="p-6">
         <Link href="/" className="flex items-center gap-2 w-fit">
-          <div className="rounded-xl bg-primary p-2 text-white">
-            <LogoMark className="h-5 w-5" />
+          <div className="bg-primary rounded-xl p-2">
+            <LogoMark className="h-5 w-5 text-white" />
           </div>
           <span className="text-xl font-bold">iDental</span>
         </Link>

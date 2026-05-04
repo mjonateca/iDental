@@ -3,7 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CalendarDays, Camera, Clock, Star, Users } from "lucide-react";
+import { CalendarDays, Camera, Clock, Sparkles, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -125,7 +125,7 @@ export default function BarberDashboardClient({
         <Metric title="Turnos hoy" value={todayBookings.length} icon={Clock} />
         <Metric title="Próximos turnos" value={upcomingBookings.length} icon={CalendarDays} />
         <Metric title="Clientes hoy" value={new Set(todayBookings.map((booking) => booking.clients?.name).filter(Boolean)).size} icon={Users} />
-        <Metric title="Estimado hoy" value={formatCurrency(expectedToday)} icon={Star} />
+        <Metric title="Estimado hoy" value={formatCurrency(expectedToday)} icon={Sparkles} />
       </div>
 
       <div className="mb-6 flex gap-2 overflow-x-auto pb-2">

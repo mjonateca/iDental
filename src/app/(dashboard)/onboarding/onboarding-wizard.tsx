@@ -30,7 +30,7 @@ export interface OnboardingData {
 const STEPS = [
   { label: "Tu clínica dental", description: "Información básica" },
   { label: "Servicios",   description: "Qué ofreces" },
-  { label: "Tu perfil",  description: "Perfil profesional" },
+  { label: "Tu perfil",  description: "Perfil de profesional" },
 ];
 
 export default function OnboardingWizard({ userId }: { userId: string }) {
@@ -38,9 +38,9 @@ export default function OnboardingWizard({ userId }: { userId: string }) {
   const [step, setStep] = useState(0);
   const [data, setData] = useState<Partial<OnboardingData>>({
     services: [
-      { name: "Limpieza dental", duration_min: 45, price: 1800 },
-      { name: "Valoración general", duration_min: 30, price: 1200 },
-      { name: "Blanqueamiento", duration_min: 60, price: 4200 },
+      { name: "Limpieza dental", duration_min: 30, price: 350 },
+      { name: "Valoración general", duration_min: 45, price: 550 },
+      { name: "Blanqueamiento", duration_min: 20, price: 300 },
     ],
   });
 
@@ -65,8 +65,8 @@ export default function OnboardingWizard({ userId }: { userId: string }) {
       {/* Header */}
       <header className="border-b px-4 py-4">
         <div className="max-w-lg mx-auto flex items-center gap-3">
-          <div className="rounded-xl bg-primary p-2 text-white">
-            <LogoMark className="h-5 w-5" />
+          <div className="bg-primary rounded-xl p-2">
+            <LogoMark className="h-5 w-5 text-white" />
           </div>
           <div>
             <p className="font-semibold text-sm">iDental</p>

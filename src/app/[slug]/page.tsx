@@ -42,7 +42,7 @@ export default async function ShopPage({ params }: Props) {
   const [{ data: shop }, { data: auth }] = await Promise.all([
     supabase
       .from("shops")
-      .select("*, barbers(*, barber_services(service_id)), services(*, service_addons(*))")
+      .select("*, barbers(*, barber_services(service_id)), services(*)")
       .eq("slug", slug)
       .eq("services.is_active", true)
       .single(),

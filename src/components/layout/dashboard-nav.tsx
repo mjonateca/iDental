@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Bell, Calendar, LayoutDashboard, LogOut, Settings, Star, UserRound, Users } from "lucide-react";
-import LogoMark from "@/components/branding/logo-mark";
+import { Calendar, Clock, LayoutDashboard, LogOut, Mail, Settings, Sparkles, UserRound, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import LogoMark from "@/components/branding/logo-mark";
 import { cn } from "@/lib/utils";
 import type { AccountRole } from "@/types/database";
 
@@ -17,18 +17,18 @@ type NavItem = {
 const shopNavItems: NavItem[] = [
   { tab: "summary", label: "Resumen", icon: LayoutDashboard },
   { tab: "bookings", label: "Reservas", icon: Calendar },
-  { tab: "services", label: "Servicios", icon: Star },
+  { tab: "services", label: "Servicios", icon: Sparkles },
   { tab: "barbers", label: "Profesionales", icon: UserRound },
   { tab: "clients", label: "Clientes", icon: Users },
-  { tab: "schedule", label: "Horarios", icon: Calendar },
-  { tab: "notifications", label: "Avisos", icon: Bell },
+  { tab: "schedule", label: "Horarios", icon: Clock },
+  { tab: "notifications", label: "Avisos", icon: Mail },
   { tab: "settings", label: "Ajustes", icon: Settings },
 ];
 
 const clientNavItems: NavItem[] = [
   { tab: "summary", label: "Cerca de mí", icon: LayoutDashboard },
   { tab: "bookings", label: "Reservas", icon: Calendar },
-  { tab: "favorites", label: "Favoritos", icon: Bell },
+  { tab: "favorites", label: "Favoritos", icon: Mail },
   { tab: "profile", label: "Perfil", icon: UserRound },
 ];
 
@@ -59,22 +59,14 @@ export default function DashboardNav({ role = "shop_owner" }: { role?: AccountRo
 
   return (
     <>
-      <aside className="fixed left-0 top-0 hidden h-full w-72 flex-col border-r border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(240,250,255,0.96))] backdrop-blur md:flex">
-        <div className="border-b border-sky-100 p-6">
+      <aside className="fixed left-0 top-0 hidden h-full w-60 flex-col border-r bg-background md:flex">
+        <div className="border-b p-6">
           <Link href={tabHref("summary")} className="flex items-center gap-2">
-            <div className="rounded-2xl bg-primary p-2.5 text-white shadow-sm">
-              <LogoMark className="h-5 w-5" />
+            <div className="rounded-xl bg-primary p-2">
+              <LogoMark className="h-5 w-5 text-white" />
             </div>
-            <div>
-              <span className="block text-lg font-bold">iDental</span>
-              <span className="block text-xs text-muted-foreground">Control operativo</span>
-            </div>
+            <span className="text-lg font-bold">iDental</span>
           </Link>
-        </div>
-
-        <div className="mx-4 mt-4 rounded-2xl border border-sky-100 bg-white/70 p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">Navegación</p>
-          <p className="mt-1 text-sm text-muted-foreground">Clínica, agenda, equipo y cobros en un solo lugar.</p>
         </div>
 
         <nav className="flex-1 space-y-1 p-4">
@@ -83,10 +75,10 @@ export default function DashboardNav({ role = "shop_owner" }: { role?: AccountRo
               key={item.tab}
               href={tabHref(item.tab)}
               className={cn(
-                "flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition-all",
+                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
                 pathname === "/dashboard" && activeTab === item.tab
-                  ? "bg-[linear-gradient(135deg,hsl(var(--primary)),#8fd7ff)] text-white shadow-[0_12px_30px_rgba(91,181,244,0.28)]"
-                  : "text-muted-foreground hover:bg-white hover:text-foreground hover:shadow-sm"
+                  ? "bg-primary text-white"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
               <item.icon className="h-4.5 w-4.5" />
@@ -95,10 +87,10 @@ export default function DashboardNav({ role = "shop_owner" }: { role?: AccountRo
           ))}
         </nav>
 
-        <div className="border-t border-sky-100 p-4">
+        <div className="border-t p-4">
           <button
             onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-white hover:text-foreground"
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <LogOut className="h-4 w-4" />
             Cerrar sesión
@@ -106,7 +98,7 @@ export default function DashboardNav({ role = "shop_owner" }: { role?: AccountRo
         </div>
       </aside>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-sky-100 bg-white/95 px-2 py-2 backdrop-blur md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background px-2 py-2 md:hidden">
         <div className="flex items-center justify-around">
           {navItems.map((item) => (
             <Link

@@ -14,6 +14,7 @@ import {
   Loader2,
   Mail,
   Send,
+  Sparkles,
   Star,
   Trash2,
   TrendingUp,
@@ -764,7 +765,7 @@ export default function DashboardClient({
           </Card>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <BarChart title="Servicios más solicitados" icon={Star} items={analytics.topServices.slice(0, 5).map((item) => ({ label: item.name, value: item.count, sub: formatCurrency(item.revenue, shopState.currency) }))} emptyText="Sin datos todavía." />
+            <BarChart title="Servicios más solicitados" icon={Sparkles} items={analytics.topServices.slice(0, 5).map((item) => ({ label: item.name, value: item.count, sub: formatCurrency(item.revenue, shopState.currency) }))} emptyText="Sin datos todavía." />
             <BarChart title="Profesionales con más reservas" icon={UserRound} items={analytics.topBarbers.slice(0, 5).map((item) => ({ label: item.name, value: item.count, sub: formatCurrency(item.revenue, shopState.currency) }))} emptyText="Sin datos todavía." />
             <BarChart title="Franjas con más demanda" icon={Clock} items={analytics.peakHours.slice(0, 5).map((item) => ({ label: item.slot, value: item.count, sub: `${item.count} reservas` }))} emptyText="Sin datos todavía." />
             <BarChart title="Días con más demanda" icon={CalendarDays} items={analytics.peakWeekdays.slice(0, 7).map((item) => ({ label: item.day, value: item.count, sub: `${item.count} reservas` }))} emptyText="Sin datos todavía." />
@@ -787,7 +788,7 @@ export default function DashboardClient({
                       <p className="font-medium">{SUBSCRIPTION_LABELS[subscription.status]}</p>
                       <p className="font-bold text-primary">{formatCurrency(subscription.monthly_price, subscription.currency)}/mes</p>
                     </div>
-                    <p className="mt-1 text-sm text-muted-foreground">Próxima renovación: {subscription.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString() : "Pendiente"}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">Próximo tratamiento: {subscription.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString() : "Pendiente"}</p>
                     {subscription.last_payment_error && <p className="mt-2 rounded-lg bg-destructive/10 p-2 text-sm text-destructive">{subscription.last_payment_error}</p>}
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -1021,7 +1022,7 @@ export default function DashboardClient({
               {services.map((service) => (
                 <div key={service.id} className={`flex items-center gap-4 rounded-xl border p-4 transition-opacity ${!service.is_active ? "opacity-50" : ""}`}>
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                    <Star className="h-5 w-5 text-primary" />
+                    <Sparkles className="h-5 w-5 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium">{service.name}</p>
@@ -1421,7 +1422,7 @@ function CreateServiceForm({ onSubmit }: { onSubmit: (e: FormEvent<HTMLFormEleme
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-3">
           <Field name="name" label="Nombre" required placeholder="Limpieza dental" />
-          <Field name="category" label="Categoría" placeholder="Prevención, Estética, Ortodoncia..." />
+          <Field name="category" label="Categoría" placeholder="Higiene, diagnóstico, estética..." />
           <div className="grid grid-cols-2 gap-3">
             <Field name="duration_min" label="Duración (min)" type="number" defaultValue="30" required />
             <Field name="price" label="Precio" type="number" defaultValue="500" required />
@@ -1444,7 +1445,7 @@ function CreateBarberForm({ services, onSubmit }: { services: Service[]; onSubmi
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-3">
           <Field name="display_name" label="Nombre público" required placeholder="Ej: Miguel" />
-          <Field name="specialty" label="Especialidad" placeholder="Ej: Ortodoncia estética" />
+          <Field name="specialty" label="Especialidad" placeholder="Ej: Tratamientos clásicos" />
           <div className="space-y-1">
             <Label htmlFor="bio">Bio</Label>
             <textarea id="bio" name="bio" placeholder="Breve descripción..." className="min-h-[76px] w-full rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />

@@ -326,7 +326,7 @@ export default function BookingFlow({ shop, client, preselectedBarberId }: Props
                       )}
                       {barber.rating > 0 && (
                         <span className="absolute bottom-0.5 right-0.5 flex items-center gap-0.5 rounded bg-black/60 px-1 py-0.5 text-[9px] font-semibold text-white leading-none">
-                          <Star className="h-2 w-2 fill-amber-400 text-amber-400" />
+                          <Star className="h-2 w-2 fill-sky-300 text-sky-300" />
                           {barber.rating.toFixed(1)}
                         </span>
                       )}

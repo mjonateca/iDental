@@ -1,12 +1,12 @@
 import Link from "next/link";
-import LogoMark from "@/components/branding/logo-mark";
 import { Button } from "@/components/ui/button";
+import LogoMark from "@/components/branding/logo-mark";
 
 export default function ShopNotFound() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 text-center">
       <div className="bg-muted rounded-2xl p-6 mb-6">
-        <LogoMark className="h-12 w-12 text-muted-foreground mx-auto" />
+        <LogoMark className="h-12 w-12 text-primary mx-auto" />
       </div>
       <h1 className="text-2xl font-bold mb-2">Clínica dental no encontrada</h1>
       <p className="text-muted-foreground mb-8 max-w-sm">

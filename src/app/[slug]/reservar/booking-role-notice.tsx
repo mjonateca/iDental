@@ -43,7 +43,7 @@ export default function BookingRoleNotice({ role, shopSlug }: { role: AccountRol
           <div className="rounded-lg border bg-muted/60 p-4">
             <div className="flex items-start gap-3">
               <UserRound className="mt-0.5 h-5 w-5 text-primary" />
-              <p className="text-sm">Cierra esta sesión e inicia con una cuenta cliente para reservar y evaluar profesionales.</p>
+              <p className="text-sm">Cierra esta sesión e inicia con una cuenta cliente para reservar y elegir profesional.</p>
             </div>
           </div>
           <div className="grid gap-2">

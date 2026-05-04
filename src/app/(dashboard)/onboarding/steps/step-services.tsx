@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Star, Trash2 } from "lucide-react";
+import { Plus, Sparkles, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,9 +30,9 @@ interface Props {
 export default function StepServices({ data, onUpdate, onNext, onBack }: Props) {
   const [services, setServices] = useState(
     data.services || [
-      { name: "Limpieza dental", duration_min: 45, price: 1800 },
-      { name: "Valoración general", duration_min: 30, price: 1200 },
-      { name: "Blanqueamiento", duration_min: 60, price: 4200 },
+      { name: "Limpieza dental", duration_min: 30, price: 350 },
+      { name: "Valoración general", duration_min: 45, price: 550 },
+      { name: "Blanqueamiento", duration_min: 20, price: 300 },
     ]
   );
   const [showForm, setShowForm] = useState(false);
@@ -44,13 +44,13 @@ export default function StepServices({ data, onUpdate, onNext, onBack }: Props) 
     formState: { errors },
   } = useForm<ServiceForm>({
     resolver: zodResolver(serviceSchema),
-    defaultValues: { duration_min: 45, price: 1800 },
+    defaultValues: { duration_min: 30, price: 350 },
   });
 
   function addService(d: ServiceForm) {
     const updated = [...services, d];
     setServices(updated);
-    reset({ duration_min: 45, price: 1800 });
+    reset({ duration_min: 30, price: 350 });
     setShowForm(false);
   }
 
@@ -69,7 +69,7 @@ export default function StepServices({ data, onUpdate, onNext, onBack }: Props) 
       <CardHeader>
         <div className="flex items-center gap-3 mb-1">
           <div className="bg-primary/10 rounded-xl p-2.5">
-            <Star className="h-5 w-5 text-primary" />
+            <Sparkles className="h-5 w-5 text-primary" />
           </div>
           <div>
             <CardTitle>Servicios</CardTitle>
@@ -120,7 +120,7 @@ export default function StepServices({ data, onUpdate, onNext, onBack }: Props) 
 
             <div className="space-y-1">
               <Label htmlFor="svc-name">Nombre</Label>
-              <Input id="svc-name" placeholder="Limpieza, ortodoncia, endodoncia..." {...register("name")} />
+              <Input id="svc-name" placeholder="Limpieza, valoración, blanqueamiento..." {...register("name")} />
               {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
             </div>
 

@@ -54,7 +54,7 @@ export function buildReminderEmailHtml({
   <table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px">
     <tr><td align="center">
       <table width="100%" style="max-width:520px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.1)">
-        <tr><td style="background:#0d9488;padding:28px 32px;text-align:center">
+        <tr><td style="background:#38bdf8;padding:28px 32px;text-align:center">
           <p style="margin:0;font-size:32px">⏰</p>
           <h1 style="margin:8px 0 0;color:#fff;font-size:20px;font-weight:700">Recordatorio de cita</h1>
           <p style="margin:4px 0 0;color:rgba(255,255,255,.8);font-size:14px">${shopName}</p>
@@ -69,11 +69,11 @@ export function buildReminderEmailHtml({
             <tr><td style="padding:6px 0"><span style="color:#6b7280;font-size:13px">Hora</span><br><strong style="color:#111827;font-size:15px">${formattedTime}</strong></td></tr>
           </table>
           <div style="text-align:center;margin-top:24px">
-            <a href="${bookingUrl}" style="background:#0d9488;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">Ver mi reserva</a>
+            <a href="${bookingUrl}" style="background:#38bdf8;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">Ver mi reserva</a>
           </div>
         </td></tr>
         <tr><td style="padding:16px 32px;border-top:1px solid #f3f4f6;text-align:center">
-          <p style="margin:0;color:#9ca3af;font-size:12px">Powered by <a href="${buildAppUrl()}" style="color:#0d9488;text-decoration:none">iDental</a></p>
+          <p style="margin:0;color:#9ca3af;font-size:12px">Powered by <a href="${buildAppUrl()}" style="color:#38bdf8;text-decoration:none">iDental</a></p>
         </td></tr>
       </table>
     </td></tr>

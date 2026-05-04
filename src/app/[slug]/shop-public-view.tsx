@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { MapPin, Phone, Star, Clock, Home, ExternalLink } from "lucide-react";
 import LogoMark from "@/components/branding/logo-mark";
-import { formatCurrency } from "@/lib/utils";
+import { buildMapsEmbedUrl, formatCurrency, normalizeMapsUrl } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { AccountRole, Shop, Barber, Service } from "@/types/database";
@@ -39,6 +39,10 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
     return activeServices.filter((s) => serviceIds.has(s.id));
   }
 
+  const locationQuery = [shop.address, shop.city, shop.country_name].filter(Boolean).join(", ");
+  const mapsEmbedSrc = buildMapsEmbedUrl(shop.maps_url, locationQuery || null);
+  const mapsExternalUrl = normalizeMapsUrl(shop.maps_url) || null;
+
   return (
     <div className="min-h-screen bg-[hsl(var(--muted))]">
       {/* Header de la clínica dental */}
@@ -47,7 +51,7 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
           className="absolute inset-0 opacity-30"
           style={{
             backgroundImage:
-              `url('${shop.banner_url || "https://images.unsplash.com/photo-1609840114035-3c981b782dfe?auto=format&fit=crop&w=1200&q=80"}')`,
+              shop.banner_url ? `url('${shop.banner_url}')` : "url('https://images.unsplash.com/photo-1517832606299-7ae9b720a186?auto=format&fit=crop&w=1200&q=80')",
             backgroundSize: "cover",
             backgroundPosition: "center",
           }}
@@ -86,7 +90,18 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
                 <p className="flex items-center gap-1.5 text-sm text-zinc-300 mt-1">
                   <MapPin className="h-3.5 w-3.5" />
                   {shop.address}
+                  {mapsExternalUrl && (
+                    <a href={mapsExternalUrl} target="_blank" rel="noopener noreferrer" className="ml-1 inline-flex items-center gap-0.5 underline underline-offset-2 hover:text-white">
+                      Ver mapa <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
                 </p>
+              )}
+              {!shop.address && mapsExternalUrl && (
+                <a href={mapsExternalUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm text-zinc-300 mt-1 hover:text-white">
+                  <MapPin className="h-3.5 w-3.5" />
+                  Ver ubicación en Google Maps <ExternalLink className="h-3 w-3" />
+                </a>
               )}
               {shop.phone && (
                 <p className="flex items-center gap-1.5 text-sm text-zinc-300 mt-0.5">
@@ -135,7 +150,7 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
                     )}
                     {barber.rating > 0 && (
                       <span className="absolute bottom-1 right-1 flex items-center gap-0.5 rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-white leading-none">
-                        <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />
+                        <Star className="h-2.5 w-2.5 fill-sky-300 text-sky-300" />
                         {barber.rating.toFixed(1)}
                       </span>
                     )}
@@ -146,7 +161,6 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
                   {barber.specialty && (
                     <p className="mt-1 text-xs text-primary">{barber.specialty}</p>
                   )}
-
                 </button>
               ))}
             </div>
@@ -194,17 +208,40 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
         </section>
 
         {/* Mapa */}
-        {shop.maps_url && (
+        {mapsEmbedSrc && (
           <section>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-semibold">Ubicación</h2>
-              <a href={shop.maps_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm text-primary hover:underline">
-                <ExternalLink className="h-3.5 w-3.5" />Abrir en Google Maps
-              </a>
+              {mapsExternalUrl && (
+                <a
+                  href={mapsExternalUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-sm text-primary hover:underline"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  Abrir en Google Maps
+                </a>
+              )}
             </div>
             <div className="overflow-hidden rounded-xl border shadow-sm">
-              <iframe src={shop.maps_url} width="100%" height="300" style={{ border: 0 }} allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" title="Ubicación de la clínica dental" />
+              <iframe
+                src={mapsEmbedSrc}
+                width="100%"
+                height="300"
+                style={{ border: 0 }}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title="Ubicación de la clínica dental"
+              />
             </div>
+            {shop.address && (
+              <p className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
+                <MapPin className="h-3.5 w-3.5 shrink-0" />
+                {shop.address}
+              </p>
+            )}
           </section>
         )}
 
@@ -231,7 +268,7 @@ export default function ShopPublicView({ shop, viewerRole }: Props) {
 
           {shop.deposit_required && shop.deposit_amount > 0 && (
             <p className="text-xs text-center text-muted-foreground mt-3">
-              Se requiere depósito de {formatCurrency(shop.deposit_amount, "DOP")} al reservar
+              Se requiere depósito de {formatCurrency(shop.deposit_amount, shop.currency || "USD")} al reservar
             </p>
           )}
         </div>
