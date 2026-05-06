@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { getCitiesForCountry, getCountryName, getCurrencyForCountry } from "@/lib/locations";
-import { buildAppUrl } from "@/lib/utils";
+import { buildAppUrl"@/lib/utils";
 import type { OnboardingData } from "../onboarding-wizard";
 
 const APP_BUSINESS_TYPE = "dental";
@@ -50,11 +50,13 @@ export default function StepBarber({ data, onBack, onComplete, userId }: Props) 
   async function onSubmit(formData: FormData) {
     setLoading(true);
 
-    // Modo demo: simular guardado y redirigir
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith("http")) {
-      await new Promise((r) => setTimeout(r, 800));
-      toast({ title: "¡Clínica dental creada! (demo)", description: buildAppUrl("/sonrisa-clara") + " ya está lista" });
-      onComplete("sonrisa-clara");
+      toast({
+        variant: "destructive",
+        title: "Falta configuración de Supabase",
+        description: "No se puede crear la clínica porque NEXT_PUBLIC_SUPABASE_URL no está configurada.",
+      });
+      setLoading(false);
       return;
     }
 
