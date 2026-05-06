@@ -71,12 +71,6 @@ export default function RegisterPage() {
   const cities = getCitiesForCountry(countryCode);
 
   async function onSubmit(data: RegisterForm) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (!supabaseUrl?.startsWith("http")) {
-      router.push("/dashboard");
-      return;
-    }
-
     setLoading(true);
     const supabase = createClient();
 
@@ -96,7 +90,7 @@ export default function RegisterPage() {
           email: data.email,
           phone: data.phone,
           countryCode: data.countryCode,
-        currency: getCurrencyForCountry(data.countryCode).currency,
+          currency: getCurrencyForCountry(data.countryCode).currency,
           city: data.city,
           address: data.address || "",
           description: data.description || "",
@@ -125,7 +119,7 @@ export default function RegisterPage() {
         title: "Error al registrarse",
         description:
           msg.includes("Invalid URL") || msg.includes("supabaseUrl")
-            ? "Supabase no está configurado. Agrega las variables en .env.local."
+            ? "Supabase no está configurado. Revisa las variables de entorno en Vercel."
             : msg.includes("email") && msg.includes("invalid")
               ? "Usa un correo real. Algunos dominios de prueba no son aceptados."
               : msg,
@@ -170,7 +164,7 @@ export default function RegisterPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="specialty">Especialidad</Label>
-                <Input id="specialty" placeholder="Fade, valoración, diseño..." {...register("specialty")} />
+                <Input id="specialty" placeholder="Valoración, ortodoncia, estética..." {...register("specialty")} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="shopSlug">Clínica dental donde trabajas</Label>
