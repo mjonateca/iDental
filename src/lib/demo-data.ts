@@ -1,6 +1,6 @@
 import type { Shop, Barber, Service, Booking, Client } from "@/types/database";
 
-export const IS_DEMO = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith("http");
+export const IS_DEMO = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
 export const demoShop: Shop = {
   id: "demo-shop-1",
