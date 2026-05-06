@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { getCitiesForCountry, getCountryName, getCurrencyForCountry } from "@/lib/locations";
-import { buildAppUrl"@/lib/utils";
+import { buildAppUrl } from "@/lib/utils";
 import type { OnboardingData } from "../onboarding-wizard";
 
 const APP_BUSINESS_TYPE = "dental";
