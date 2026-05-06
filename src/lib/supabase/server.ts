@@ -5,12 +5,6 @@ type CookiesToSet = Array<{ name: string; value: string; options?: Record<string
 
 const APP_BUSINESS_TYPE = "dental";
 
-const SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ubffddklafiiuexznvjo.supabase.co";
-
-const SUPABASE_ANON_KEY =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_qb1enu048-aSpn2aiLcLXQ_I7V5wTST";
-
 function filterShopSelects<T extends { from: (relation: string) => unknown }>(supabase: T): T {
   return new Proxy(supabase, {
     get(target, prop, receiver) {
@@ -48,8 +42,8 @@ export async function createClient() {
   const cookieStore = await cookies();
 
   const supabase = createServerClient(
-    SUPABASE_URL,
-    SUPABASE_ANON_KEY,
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll() {
@@ -72,13 +66,9 @@ export async function createClient() {
 }
 
 export async function createAdminClient() {
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured");
-  }
-
   const supabase = createServerClient(
-    SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
       cookies: { getAll: () => [], setAll: () => {} },
     }
