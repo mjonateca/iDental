@@ -28,6 +28,7 @@ const sendSchema = z.object({
 });
 
 const REMINDER_SUBJECT = "Recordatorio de cita";
+
 export async function POST(request: Request) {
   const context = await requireOwnedActiveShop();
   if (context.response) return context.response;
@@ -45,6 +46,7 @@ export async function POST(request: Request) {
     .single();
 
   if (!booking) return NextResponse.json({ error: "Reserva no encontrada" }, { status: 404 });
+
   const { data: shopData } = await admin
     .from("shops")
     .select("name, slug")
@@ -98,7 +100,7 @@ export async function POST(request: Request) {
     });
 
     const result = await resend.emails.send({
-      from: `${shopName} <${process.env.RESEND_FROM_EMAIL || "no-reply@i-barber.com"}>`,
+      from: `${shopName} <${process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev"}>`,
       to: recipientEmail,
       subject: REMINDER_SUBJECT,
       html,
